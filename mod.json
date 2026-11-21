@@ -8,7 +8,7 @@
 	},
 	"id": "inullexx.nullcore",
 	"name": "NullCore",
-	"version": "v1.0.0",
+	"version": "v1.0.1",
 	"developer": "iNullexx",
 	"description": "A mod menu for Geometry Dash.",
 	"dependencies": {
