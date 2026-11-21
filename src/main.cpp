@@ -18,7 +18,8 @@ class $modify(NCMenuLayer, MenuLayer) {
             return true;
         }
 
-        icon->setScale(50.f / icon->getContentSize().width);
+        // match the height of the other bottom-menu buttons (54), keep the icon round
+        icon->setScale(54.f / icon->getContentSize().height);
 
         auto button = CCMenuItemSpriteExtra::create(
             icon,
