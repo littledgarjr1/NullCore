@@ -1,13 +1,12 @@
 #include <Geode/Geode.hpp>
 #include <Geode/modify/MenuLayer.hpp>
+#include "popups.hpp"
 
 using namespace geode::prelude;
 
 class $modify(NCMenuLayer, MenuLayer) {
     bool init() {
-        if (!MenuLayer::init()) {
-            return false;
-        }
+        if (!MenuLayer::init()) return false;
 
         auto bottomMenu = this->getChildByID("bottom-menu");
         if (!bottomMenu) return true;
@@ -22,23 +21,15 @@ class $modify(NCMenuLayer, MenuLayer) {
         icon->setScale(54.f / icon->getContentSize().height);
 
         auto button = CCMenuItemSpriteExtra::create(
-            icon,
-            this,
-            menu_selector(NCMenuLayer::onNullCore)
-        );
+            icon, this, menu_selector(NCMenuLayer::onNullCore));
         button->setID("nullcore-button"_spr);
 
         bottomMenu->addChild(button);
         bottomMenu->updateLayout();
-
         return true;
     }
 
     void onNullCore(CCObject*) {
-        FLAlertLayer::create(
-            "NullCore",
-            "Menu coming soon.",
-            "OK"
-        )->show();
+        NullCorePopup::create()->show();
     }
 };
