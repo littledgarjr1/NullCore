@@ -12,9 +12,11 @@
 	"developer": "iNullexx",
 	"description": "A mod menu for Geometry Dash.",
 	"dependencies": {
-		"geode.node-ids": {
-			"importance": "required",
-			"version": ">=v1.23.3"
-		}
+		"geode.node-ids": ">=v1.23.3"
+	},
+	"resources": {
+		"sprites": [
+			"resources/*.png"
+		]
 	}
 }
