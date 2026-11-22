@@ -106,10 +106,12 @@ protected:
     }
 
     void buildSound() {
-        auto label = theme::text("Sound effects are coming soon.", .36f, m_w - 130.f);
+        auto label = theme::text(
+            "Sound effects are coming soon.", scaled(.36f), contentW() - scaled(24.f)
+        );
         if (label) {
             label->setColor(theme::noteColor());
-            addNode(label, { 10.f + 96.f + 8.f + (m_w - 10.f - 96.f - 8.f) / 2.f, m_h / 2.f });
+            addNode(label, { contentCenterX(), m_h / 2.f });
         }
     }
 

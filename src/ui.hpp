@@ -215,13 +215,7 @@ namespace nc::theme {
             : (light() ? rgb(100, 100, 100) : rgb(190, 190, 190));
         knob->drawDot({ x, height / 2.f }, 6.5f, knobColor);
         node->addChild(knob);
-        if (!enabled) {
-            if (auto sprite = typeinfo_cast<CCSprite*>(node)) {
-                sprite->setOpacity(115);
-            } else if (auto label = typeinfo_cast<CCLabelBMFont*>(node)) {
-                label->setOpacity(115);
-            }
-        }
+        if (!enabled) node->setOpacity(115);
         return node;
     }
 }
@@ -240,6 +234,10 @@ protected:
         std::string icon;
     };
 
+    // Base dimensions are designed around a 380x370 reference window.
+    // Every layout measurement is multiplied by m_scale.
+    static constexpr float BASE_W = 380.f;
+    static constexpr float BASE_H = 370.f;
     static constexpr float PAD = 10.f;
     static constexpr float SIDEBAR_W = 96.f;
     static constexpr float GAP = 8.f;
@@ -249,7 +247,16 @@ protected:
 
     float m_w = 0.f;
     float m_h = 0.f;
+    float m_scale = 1.f;
     int m_tab = 0;
+
+    float scaled(float value) const { return value * m_scale; }
+    float pad() const { return scaled(PAD); }
+    float sidebarW() const { return scaled(SIDEBAR_W); }
+    float gap() const { return scaled(GAP); }
+    float headerH() const { return scaled(HEADER_H); }
+    float cardH() const { return scaled(CARD_H); }
+    float rowGap() const { return scaled(ROW_GAP); }
 
     std::vector<TabDef> m_tabs;
     std::vector<Ref<CCNode>> m_barNodes;
@@ -257,14 +264,22 @@ protected:
 
     virtual void buildTab(int index) = 0;
 
-    float contentX() const { return PAD + SIDEBAR_W + GAP; }
-    float contentW() const { return m_w - contentX() - PAD; }
+    float contentX() const { return pad() + sidebarW() + gap(); }
+    float contentW() const { return m_w - contentX() - pad(); }
+    float contentCenterX() const { return contentX() + contentW() * .5f; }
 
-    bool initWindow(float w, float h, std::vector<TabDef> tabs, int startTab = 0) {
-        if (!Popup::init(w, h)) return false;
+    bool initWindow(float, float, std::vector<TabDef> tabs, int startTab = 0) {
+        // The popup always uses 70% of the active game window in both axes.
+        // The supplied legacy dimensions remain in the signature for compatibility.
+        auto win = CCDirector::sharedDirector()->getWinSize();
+        float w = win.width * .70f;
+        float h = win.height * .70f;
+        if (w <= 0.f || h <= 0.f || tabs.empty()) return false;
 
         m_w = w;
         m_h = h;
+        m_scale = std::clamp(std::min(w / BASE_W, h / BASE_H), .35f, 1.8f);
+        if (!Popup::init(w, h)) return false;
         m_tabs = std::move(tabs);
         m_tab = std::clamp(startTab, 0, static_cast<int>(m_tabs.size()) - 1);
 
@@ -274,54 +289,54 @@ protected:
         auto p = theme::pal();
 
         m_mainLayer->addChildAtPosition(
-            theme::roundRect(w, h, 13.f, p.frame, p.stroke, p.frameBorder),
+            theme::roundRect(w, h, scaled(13.f), p.frame, p.stroke * m_scale, p.frameBorder),
             Anchor::BottomLeft, { 0.f, 0.f }
         );
 
         // Sidebar rail.
         m_mainLayer->addChildAtPosition(
-            theme::roundRect(SIDEBAR_W, h - 2.f * PAD, 9.f, p.sidebar, p.thin, p.sidebarBorder),
-            Anchor::BottomLeft, { PAD, PAD }
+            theme::roundRect(sidebarW(), h - 2.f * pad(), scaled(9.f), p.sidebar, p.thin * m_scale, p.sidebarBorder),
+            Anchor::BottomLeft, { pad(), pad() }
         );
 
         // Main content surface.
         m_mainLayer->addChildAtPosition(
-            theme::roundRect(contentW(), h - 2.f * PAD, 9.f, p.panel, p.thin, p.panelBorder),
-            Anchor::BottomLeft, { contentX(), PAD }
+            theme::roundRect(contentW(), h - 2.f * pad(), scaled(9.f), p.panel, p.thin * m_scale, p.panelBorder),
+            Anchor::BottomLeft, { contentX(), pad() }
         );
 
         // Brand mark + product label in the sidebar.
-        auto mark = theme::roundRect(25.f, 25.f, 7.f, p.accent, 0.f, p.accent);
-        m_mainLayer->addChildAtPosition(mark, Anchor::BottomLeft, { PAD + 11.f, h - PAD - 38.f });
+        auto mark = theme::roundRect(scaled(25.f), scaled(25.f), scaled(7.f), p.accent, 0.f, p.accent);
+        m_mainLayer->addChildAtPosition(mark, Anchor::BottomLeft, { pad() + scaled(11.f), h - pad() - scaled(38.f) });
 
-        auto brand = theme::text("NC", .48f, 22.f);
+        auto brand = theme::text("NC", scaled(.48f), scaled(22.f));
         if (brand) {
             brand->setColor(theme::light() ? ccColor3B{255,255,255} : ccColor3B{0,0,0});
-            m_mainLayer->addChildAtPosition(brand, Anchor::BottomLeft, { PAD + 23.5f, h - PAD - 25.5f });
+            m_mainLayer->addChildAtPosition(brand, Anchor::BottomLeft, { pad() + scaled(23.5f), h - pad() - scaled(25.5f) });
         }
 
-        auto wordmark = theme::text("NULLCORE", .34f, 58.f);
+        auto wordmark = theme::text("NULLCORE", scaled(.34f), scaled(58.f));
         if (wordmark) {
             wordmark->setAnchorPoint({ 0.f, .5f });
-            m_mainLayer->addChildAtPosition(wordmark, Anchor::BottomLeft, { PAD + 43.f, h - PAD - 25.5f });
+            m_mainLayer->addChildAtPosition(wordmark, Anchor::BottomLeft, { pad() + scaled(43.f), h - pad() - scaled(25.5f) });
         }
 
         // Thin divider below sidebar brand.
         auto divider = CCDrawNode::create();
         divider->drawSegment(
-            { PAD + 9.f, h - PAD - 55.f },
-            { PAD + SIDEBAR_W - 9.f, h - PAD - 55.f },
-            .6f, p.sidebarBorder
+            { pad() + scaled(9.f), h - pad() - scaled(55.f) },
+            { pad() + sidebarW() - scaled(9.f), h - pad() - scaled(55.f) },
+            .6f * m_scale, p.sidebarBorder
         );
         m_mainLayer->addChild(divider);
 
         // Close control.
         auto close = CCMenuItemExt::createSpriteExtra(
-            theme::closeX(22.f),
+            theme::closeX(scaled(22.f)),
             [this](CCMenuItemSpriteExtra*) { this->onClose(nullptr); }
         );
         m_buttonMenu->addChildAtPosition(
-            close, Anchor::TopRight, { -3.f, -3.f }
+            close, Anchor::TopRight, { -scaled(3.f), -scaled(3.f) }
         );
 
         buildBar();
@@ -333,33 +348,33 @@ protected:
     void buildHeader() {
         auto p = theme::pal();
 
-        auto title = theme::text(m_tabs[m_tab].name, .58f, contentW() - 70.f);
+        auto title = theme::text(m_tabs[m_tab].name, scaled(.58f), contentW() - scaled(70.f));
         if (title) {
             title->setAnchorPoint({ 0.f, .5f });
-            addNode(title, { contentX() + 12.f, m_h - PAD - 25.f });
+            addNode(title, { contentX() + scaled(12.f), m_h - pad() - scaled(25.f) });
         }
 
-        auto status = theme::text("READY", .27f, 42.f);
+        auto status = theme::text("READY", scaled(.27f), scaled(42.f));
         if (status) {
             status->setColor(p.secondaryText);
             status->setAnchorPoint({ 1.f, .5f });
-            addNode(status, { m_w - PAD - 12.f, m_h - PAD - 25.f });
+            addNode(status, { m_w - pad() - scaled(12.f), m_h - pad() - scaled(25.f) });
         }
 
         auto line = CCDrawNode::create();
         line->drawSegment(
-            { contentX() + 10.f, m_h - PAD - HEADER_H },
-            { m_w - PAD - 10.f, m_h - PAD - HEADER_H },
-            .65f, p.panelBorder
+            { contentX() + scaled(10.f), m_h - pad() - headerH() },
+            { m_w - pad() - scaled(10.f), m_h - pad() - headerH() },
+            .65f * m_scale, p.panelBorder
         );
         addNode(line, { 0.f, 0.f });
     }
 
     void buildBar() {
         auto p = theme::pal();
-        constexpr float itemW = SIDEBAR_W - 14.f;
-        constexpr float itemH = 34.f;
-        float startY = m_h - PAD - 77.f;
+        float itemW = sidebarW() - scaled(14.f);
+        float itemH = scaled(34.f);
+        float startY = m_h - pad() - scaled(77.f);
 
         for (int i = 0; i < static_cast<int>(m_tabs.size()); ++i) {
             bool selected = i == m_tab;
@@ -368,13 +383,13 @@ protected:
 
             if (selected) {
                 face->addChild(theme::roundRect(
-                    itemW, itemH, 6.f,
-                    p.selected, p.thin, p.selectedBorder
+                    itemW, itemH, scaled(6.f),
+                    p.selected, p.thin * m_scale, p.selectedBorder
                 ));
                 auto indicator = CCDrawNode::create();
                 indicator->drawSegment(
-                    { 3.f, 8.f }, { 3.f, itemH - 8.f },
-                    2.f, p.accent
+                    { scaled(3.f), scaled(8.f) }, { scaled(3.f), itemH - scaled(8.f) },
+                    scaled(2.f), p.accent
                 );
                 face->addChild(indicator);
             }
@@ -382,15 +397,15 @@ protected:
             auto icon = CCSprite::create(
                 Mod::get()->expandSpriteName(m_tabs[i].icon).c_str()
             );
-            float textX = 12.f;
+            float textX = scaled(12.f);
             if (icon) {
-                icon->setScale(16.f / icon->getContentSize().height);
-                icon->setPosition({ 19.f, itemH / 2.f });
+                icon->setScale(scaled(16.f) / icon->getContentSize().height);
+                icon->setPosition({ scaled(19.f), itemH / 2.f });
                 face->addChild(icon);
-                textX = 34.f;
+                textX = scaled(34.f);
             }
 
-            auto label = theme::text(m_tabs[i].name, .31f, itemW - textX - 5.f);
+            auto label = theme::text(m_tabs[i].name, scaled(.31f), itemW - textX - scaled(5.f));
             if (label) {
                 label->setAnchorPoint({ 0.f, .5f });
                 label->setPosition({ textX, itemH / 2.f });
@@ -410,7 +425,7 @@ protected:
 
             m_buttonMenu->addChildAtPosition(
                 button, Anchor::BottomLeft,
-                { PAD + 7.f + itemW / 2.f, startY - i * 39.f }
+                { pad() + scaled(7.f) + itemW / 2.f, startY - i * scaled(39.f) }
             );
             m_barNodes.push_back(button);
         }
@@ -441,13 +456,14 @@ protected:
     }
 
     float boxW() const {
-        return (contentW() - 3.f * GAP) / 2.f;
+        return contentW() - 2.f * gap();
     }
 
     CCPoint cell(int col, int row) const {
-        float x = contentX() + GAP + col * (boxW() + GAP);
-        float yTop = m_h - PAD - HEADER_H - 12.f - row * ROW_GAP;
-        return { x, yTop - CARD_H };
+        (void)col; // Kept for compatibility with existing popup calls.
+        float x = contentX() + gap();
+        float yTop = m_h - pad() - headerH() - scaled(12.f) - row * rowGap();
+        return { x, yTop - cardH() };
     }
 
     void track(CCNode* node) {
@@ -469,23 +485,23 @@ protected:
     void addBoxBase(CCPoint pos, std::string const& label, bool enabled = true) {
         auto p = theme::pal();
         addNode(
-            theme::roundRect(boxW(), CARD_H, 6.f, p.card, p.thin, p.cardBorder),
+            theme::roundRect(boxW(), cardH(), scaled(6.f), p.card, p.thin * m_scale, p.cardBorder),
             pos
         );
 
-        auto text = theme::text(label, .30f, boxW() - 42.f);
+        auto text = theme::text(label, scaled(.30f), boxW() - scaled(98.f));
         if (text) {
             text->setAnchorPoint({ 0.f, .5f });
             if (!enabled) text->setOpacity(115);
-            addNode(text, { pos.x + 8.f, pos.y + CARD_H / 2.f });
+            addNode(text, { pos.x + scaled(8.f), pos.y + cardH() / 2.f });
         }
     }
 
     void addNote(std::string const& value) {
-        auto label = theme::text(value, .27f, contentW() - 20.f);
+        auto label = theme::text(value, scaled(.27f), contentW() - scaled(20.f));
         if (!label) return;
         label->setColor(theme::noteColor());
-        addNode(label, { contentX() + contentW() / 2.f, PAD + 13.f });
+        addNode(label, { contentCenterX(), pad() + scaled(13.f) });
     }
 
     void addCheckbox(
@@ -504,10 +520,11 @@ protected:
         );
         toggle->toggle(value);
         toggle->setEnabled(enabled);
+        toggle->setScale(m_scale);
 
         addMenuItem(toggle, {
-            pos.x + boxW() - 23.f,
-            pos.y + CARD_H / 2.f
+            pos.x + boxW() - scaled(23.f),
+            pos.y + cardH() / 2.f
         });
     }
 
@@ -519,16 +536,16 @@ protected:
         addBoxBase(pos, label);
 
         auto p = theme::pal();
-        constexpr float fieldW = 66.f;
-        constexpr float fieldH = 25.f;
+        float fieldW = scaled(66.f);
+        float fieldH = scaled(25.f);
 
         auto face = CCNode::create();
         face->setContentSize({ fieldW, fieldH });
         face->addChild(theme::roundRect(
-            fieldW, fieldH, 5.f, p.field, p.thin, p.fieldBorder
+            fieldW, fieldH, scaled(5.f), p.field, p.thin * m_scale, p.fieldBorder
         ));
 
-        auto labelNode = theme::text(value, .29f, fieldW - 7.f, true);
+        auto labelNode = theme::text(value, scaled(.29f), fieldW - scaled(7.f), true);
         if (labelNode) {
             labelNode->setPosition({ fieldW / 2.f, fieldH / 2.f });
             face->addChild(labelNode);
@@ -536,21 +553,22 @@ protected:
 
         Ref<CCLabelBMFont> labelRef = labelNode;
         float baseScale = labelNode ? labelNode->getScale() : 1.f;
+        float labelMaxWidth = scaled(59.f);
         auto button = CCMenuItemExt::createSpriteExtra(
             face,
-            [onNext, labelRef, baseScale](CCMenuItemSpriteExtra*) {
+            [onNext, labelRef, baseScale, labelMaxWidth](CCMenuItemSpriteExtra*) {
                 auto next = onNext();
                 if (labelRef) {
                     labelRef->setString(next.c_str());
                     labelRef->setScale(baseScale);
-                    labelRef->limitLabelWidth(59.f, baseScale, .1f);
+                    labelRef->limitLabelWidth(labelMaxWidth, baseScale, .1f);
                 }
             }
         );
 
         addMenuItem(button, {
-            pos.x + boxW() - fieldW / 2.f - 5.f,
-            pos.y + CARD_H / 2.f
+            pos.x + boxW() - fieldW / 2.f - scaled(5.f),
+            pos.y + cardH() / 2.f
         });
     }
 
@@ -565,7 +583,7 @@ protected:
         auto input = TextInput::create(64.f, "0", "bigFont.fnt");
         input->setCommonFilter(CommonFilter::Float);
         input->setMaxCharCount(8);
-        input->setScale(.78f);
+        input->setScale(.78f * m_scale);
         input->setString(value);
 
         TextInput* raw = input;
@@ -574,8 +592,8 @@ protected:
         });
 
         addNode(input, {
-            pos.x + boxW() - 34.f,
-            pos.y + CARD_H / 2.f
+            pos.x + boxW() - scaled(34.f),
+            pos.y + cardH() / 2.f
         });
     }
 
@@ -587,14 +605,14 @@ protected:
         auto p = theme::pal();
 
         auto face = CCNode::create();
-        face->setContentSize({ boxW(), CARD_H });
+        face->setContentSize({ boxW(), cardH() });
         face->addChild(theme::roundRect(
-            boxW(), CARD_H, 6.f, p.card, p.thin, p.cardBorder
+            boxW(), cardH(), scaled(6.f), p.card, p.thin * m_scale, p.cardBorder
         ));
 
-        auto text = theme::text(label, .31f, boxW() - 14.f);
+        auto text = theme::text(label, scaled(.31f), boxW() - scaled(14.f));
         if (text) {
-            text->setPosition({ boxW() / 2.f, CARD_H / 2.f });
+            text->setPosition({ boxW() / 2.f, cardH() / 2.f });
             face->addChild(text);
         }
 
@@ -603,7 +621,7 @@ protected:
         );
         addMenuItem(button, {
             pos.x + boxW() / 2.f,
-            pos.y + CARD_H / 2.f
+            pos.y + cardH() / 2.f
         });
     }
 };
