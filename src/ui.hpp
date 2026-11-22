@@ -272,24 +272,25 @@ protected:
 
     virtual void buildTab(int index) = 0;
 
-    float contentX() const { return pad() + sidebarW() + gap(); }
+    float contentX() const { return m_tabs.empty() ? pad() : pad() + sidebarW() + gap(); }
     float contentW() const { return m_w - contentX() - pad(); }
     float contentCenterX() const { return contentX() + contentW() * .5f; }
 
     bool initWindow(float, float, std::vector<TabDef> tabs, int startTab = 0) {
-        // The popup always uses 70% of the active game window in both axes.
-        // The supplied legacy dimensions remain in the signature for compatibility.
+        // Main interface uses 70%; dedicated settings windows use 50%.
         auto win = CCDirector::sharedDirector()->getWinSize();
-        float w = win.width * .70f;
-        float h = win.height * .70f;
-        if (w <= 0.f || h <= 0.f || tabs.empty()) return false;
+        bool settingsOnly = tabs.empty();
+        float fraction = settingsOnly ? .50f : .70f;
+        float w = win.width * fraction;
+        float h = win.height * fraction;
+        if (w <= 0.f || h <= 0.f) return false;
 
         m_w = w;
         m_h = h;
         m_scale = std::clamp(std::min(w / BASE_W, h / BASE_H), .35f, 1.8f);
         if (!Popup::init(w, h)) return false;
         m_tabs = std::move(tabs);
-        m_tab = std::clamp(startTab, 0, static_cast<int>(m_tabs.size()) - 1);
+        m_tab = settingsOnly ? 0 : std::clamp(startTab, 0, static_cast<int>(m_tabs.size()) - 1);
 
         m_bgSprite->setVisible(false);
         m_closeBtn->setVisible(false);
@@ -301,44 +302,45 @@ protected:
             Anchor::BottomLeft, { 0.f, 0.f }
         );
 
-        // Sidebar rail.
-        m_mainLayer->addChildAtPosition(
-            theme::roundRect(sidebarW(), h - 2.f * pad(), scaled(9.f), p.sidebar, p.thin * m_scale, p.sidebarBorder),
-            Anchor::BottomLeft, { pad(), pad() }
-        );
+        if (!settingsOnly) {
+            // Sidebar rail and its branding are only used by the main window.
+            m_mainLayer->addChildAtPosition(
+                theme::roundRect(sidebarW(), h - 2.f * pad(), scaled(9.f), p.sidebar, p.thin * m_scale, p.sidebarBorder),
+                Anchor::BottomLeft, { pad(), pad() }
+            );
 
-        // Main content surface.
+            auto mark = theme::roundRect(scaled(25.f), scaled(25.f), scaled(7.f), p.accent, 0.f, p.accent);
+            m_mainLayer->addChildAtPosition(mark, Anchor::BottomLeft, { pad() + scaled(11.f), h - pad() - scaled(38.f) });
+
+            auto brand = theme::text("NC", scaled(.48f), scaled(22.f));
+            if (brand) {
+                brand->setColor(theme::light() ? ccColor3B{255,255,255} : ccColor3B{0,0,0});
+                m_mainLayer->addChildAtPosition(brand, Anchor::BottomLeft, { pad() + scaled(23.5f), h - pad() - scaled(25.5f) });
+            }
+
+            auto wordmark = theme::text("NULLCORE", scaled(.34f), scaled(58.f));
+            if (wordmark) {
+                wordmark->setAnchorPoint({ 0.f, .5f });
+                m_mainLayer->addChildAtPosition(wordmark, Anchor::BottomLeft, { pad() + scaled(43.f), h - pad() - scaled(25.5f) });
+            }
+
+            auto divider = CCDrawNode::create();
+            divider->drawSegment(
+                { pad() + scaled(9.f), h - pad() - scaled(55.f) },
+                { pad() + sidebarW() - scaled(9.f), h - pad() - scaled(55.f) },
+                .6f * m_scale, p.sidebarBorder
+            );
+            m_mainLayer->addChild(divider);
+        }
+
         m_mainLayer->addChildAtPosition(
-            theme::roundRect(contentW(), h - 2.f * pad(), scaled(9.f), p.panel, p.thin * m_scale, p.panelBorder),
+            theme::roundRect(
+                settingsOnly ? w - 2.f * pad() : contentW(),
+                h - 2.f * pad(), scaled(9.f), p.panel, p.thin * m_scale, p.panelBorder
+            ),
             Anchor::BottomLeft, { contentX(), pad() }
         );
 
-        // Brand mark + product label in the sidebar.
-        auto mark = theme::roundRect(scaled(25.f), scaled(25.f), scaled(7.f), p.accent, 0.f, p.accent);
-        m_mainLayer->addChildAtPosition(mark, Anchor::BottomLeft, { pad() + scaled(11.f), h - pad() - scaled(38.f) });
-
-        auto brand = theme::text("NC", scaled(.48f), scaled(22.f));
-        if (brand) {
-            brand->setColor(theme::light() ? ccColor3B{255,255,255} : ccColor3B{0,0,0});
-            m_mainLayer->addChildAtPosition(brand, Anchor::BottomLeft, { pad() + scaled(23.5f), h - pad() - scaled(25.5f) });
-        }
-
-        auto wordmark = theme::text("NULLCORE", scaled(.34f), scaled(58.f));
-        if (wordmark) {
-            wordmark->setAnchorPoint({ 0.f, .5f });
-            m_mainLayer->addChildAtPosition(wordmark, Anchor::BottomLeft, { pad() + scaled(43.f), h - pad() - scaled(25.5f) });
-        }
-
-        // Thin divider below sidebar brand.
-        auto divider = CCDrawNode::create();
-        divider->drawSegment(
-            { pad() + scaled(9.f), h - pad() - scaled(55.f) },
-            { pad() + sidebarW() - scaled(9.f), h - pad() - scaled(55.f) },
-            .6f * m_scale, p.sidebarBorder
-        );
-        m_mainLayer->addChild(divider);
-
-        // Close control.
         auto close = CCMenuItemExt::createSpriteExtra(
             theme::closeX(scaled(22.f)),
             [this](CCMenuItemSpriteExtra*) { this->onClose(nullptr); }
@@ -347,9 +349,13 @@ protected:
             close, Anchor::TopRight, { -scaled(3.f), -scaled(3.f) }
         );
 
-        buildBar();
-        buildHeader();
-        buildTab(m_tab);
+        if (settingsOnly) {
+            buildTab(0);
+        } else {
+            buildBar();
+            buildHeader();
+            buildTab(m_tab);
+        }
         return true;
     }
 
