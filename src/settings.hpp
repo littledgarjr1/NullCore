@@ -14,16 +14,18 @@ namespace nc {
         geode::Mod::get()->setSavedValue<bool>(key, value);
     }
 
-    // Auto Clicker target: Player 1, Player 2, or Both.
-    inline std::string autoClickerTarget() {
-        auto target = geode::Mod::get()->getSavedValue<std::string>("auto-clicker-target", "Player 1");
-        if (target != "Player 1" && target != "Player 2" && target != "Both")
-            return "Player 1";
-        return target;
+    // Auto Clicker player toggles. Preserve the previous default (P1 only).
+    inline bool autoClickerPlayer1() {
+        return geode::Mod::get()->getSavedValue<bool>("auto-clicker-p1", true);
     }
-    inline void setAutoClickerTarget(std::string const& target) {
-        if (target == "Player 1" || target == "Player 2" || target == "Both")
-            geode::Mod::get()->setSavedValue<std::string>("auto-clicker-target", target);
+    inline void setAutoClickerPlayer1(bool value) {
+        geode::Mod::get()->setSavedValue<bool>("auto-clicker-p1", value);
+    }
+    inline bool autoClickerPlayer2() {
+        return geode::Mod::get()->getSavedValue<bool>("auto-clicker-p2", false);
+    }
+    inline void setAutoClickerPlayer2(bool value) {
+        geode::Mod::get()->setSavedValue<bool>("auto-clicker-p2", value);
     }
 
     // Safe Mode defaults to ON.
