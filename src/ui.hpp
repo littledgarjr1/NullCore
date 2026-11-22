@@ -192,7 +192,6 @@ namespace nc::theme {
             node->addChild(tick);
         }
 
-        if (!enabled) node->setOpacity(145);
         return node;
     }
 
@@ -221,7 +220,7 @@ namespace nc::theme {
         float x = on ? width - inset - thumbRadius : inset + thumbRadius;
         auto thumbColor = on
             ? (light() ? rgb(255, 255, 255) : rgb(0, 0, 0))
-            : p.primaryText;
+            : rgb(p.primaryText.r, p.primaryText.g, p.primaryText.b);
         thumb->drawDot({ x, height / 2.f }, thumbRadius, thumbColor);
         node->addChild(thumb);
 
