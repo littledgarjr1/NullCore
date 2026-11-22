@@ -93,12 +93,12 @@ protected:
                 createQuickPopup(
                     "Auto Clicker Settings",
                     fmt::format(
-                        "The Auto Clicker follows your current TPS rate.\\n\\n"
-                        "Current rate: <cy>{} CPS</c>\\n"
+                        "The Auto Clicker follows your current TPS rate.\n\n"
+                        "Current rate: <cy>{} CPS</c>\n"
                         "Change TPS on the Home tab to change the click rate.",
                         static_cast<int>(std::round(nc::tps()))
                     ),
-                    "Close", nullptr, nullptr
+                    "Close", nullptr, [](FLAlertLayer*, bool) {}
                 );
             }
         );
