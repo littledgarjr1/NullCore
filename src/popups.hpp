@@ -6,11 +6,22 @@
 using namespace geode::prelude;
 
 // ---------------------------------------------------------------- Theme
-// Black and white, with grey outlines.
+// Two looks, both black and white with grey outlines:
+//   Dark  = black panels, white text
+//   Light = white panels, black text
+// Picked in NullCore Settings (the "theme" setting).
 namespace nc::theme {
+    inline bool light() {
+        return Mod::get()->getSettingValue<std::string>("theme") == "Light";
+    }
+
     inline ccColor4F black() { return {0.f, 0.f, 0.f, 1.f}; }
     inline ccColor4F white() { return {1.f, 1.f, 1.f, 1.f}; }
     inline ccColor4F grey()  { return {0.45f, 0.45f, 0.45f, 1.f}; }
+
+    inline ccColor4F bg() { return light() ? white() : black(); }
+    inline ccColor4F fg() { return light() ? black() : white(); }
+    inline ccColor3B fgText() { return light() ? ccColor3B{0, 0, 0} : ccColor3B{255, 255, 255}; }
     inline ccColor3B dimText() { return {130, 130, 130}; }
 
     // A filled rectangle with a grey outline, drawn from (0,0) to (w,h).
@@ -21,35 +32,37 @@ namespace nc::theme {
         return d;
     }
 
-    // A black button face with centered white text.
+    // A button face with centered text.
     inline CCNode* labelBox(float w, float h, char const* text, float scale, CCLabelBMFont** outLabel = nullptr) {
         auto node = CCNode::create();
         node->setContentSize(CCSize(w, h));
-        node->addChild(rect(w, h, black()));
+        node->addChild(rect(w, h, bg()));
         auto label = CCLabelBMFont::create(text, "bigFont.fnt");
         label->setScale(scale);
+        label->setColor(fgText());
         label->setPosition(CCPoint(w / 2.f, h / 2.f));
         node->addChild(label);
         if (outLabel) *outLabel = label;
         return node;
     }
 
-    // Flat switch: black with a grey knob when off, white with a black knob when on.
+    // Flat switch: background color with a grey knob when off, foreground color with a background-colored knob when on.
     inline CCNode* toggleSwitch(bool on) {
         constexpr float W = 44.f, H = 22.f;
         auto node = CCNode::create();
         node->setContentSize(CCSize(W, H));
-        node->addChild(rect(W, H, on ? white() : black()));
+        node->addChild(rect(W, H, on ? fg() : bg()));
         float kx = on ? W - 19.f : 3.f;
         CCPoint k[4] = {CCPoint(kx, 3.f), CCPoint(kx + 16.f, 3.f), CCPoint(kx + 16.f, H - 3.f), CCPoint(kx, H - 3.f)};
         auto knob = CCDrawNode::create();
-        knob->drawPolygon(k, 4, on ? black() : grey(), 0.5f, on ? black() : grey());
+        ccColor4F knobColor = on ? bg() : grey();
+        knob->drawPolygon(k, 4, knobColor, 0.5f, knobColor);
         node->addChild(knob);
         return node;
     }
 }
 
-// Short alias so the menu code can write theme::black() etc.
+// Short alias so menu code can write theme::bg() etc.
 namespace theme = nc::theme;
 
 // ---------------------------------------------------------------- Menu
@@ -78,12 +91,13 @@ protected:
         m_bgSprite->setVisible(false);
         m_closeBtn->setVisible(false);
         m_mainLayer->addChildAtPosition(
-            theme::rect(m_size.width, m_size.height, theme::black(), 2.f),
+            theme::rect(m_size.width, m_size.height, theme::bg(), 2.f),
             Anchor::BottomLeft, ccp(0.f, 0.f)
         );
 
         auto title = CCLabelBMFont::create("NullCore", "bigFont.fnt");
         title->setScale(0.7f);
+        title->setColor(theme::fgText());
         m_mainLayer->addChildAtPosition(title, Anchor::Top, ccp(0.f, -26.f));
 
         m_status = CCLabelBMFont::create("", "bigFont.fnt");
@@ -107,7 +121,7 @@ protected:
 
             auto label = CCLabelBMFont::create(r.label, "bigFont.fnt");
             label->setScale(0.42f);
-            if (r.wip) label->setColor(theme::dimText());
+            label->setColor(r.wip ? theme::dimText() : theme::fgText());
             m_mainLayer->addChildAtPosition(label, Anchor::BottomLeft, ccp(74.f, y), ccp(0.f, 0.5f));
 
             if (key == "speedhack") {

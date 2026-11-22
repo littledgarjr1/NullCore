@@ -8,7 +8,7 @@
 	},
 	"id": "inullexx.nullcore",
 	"name": "NullCore",
-	"version": "v1.1.0",
+	"version": "v0.1.2",
 	"developer": "iNullexx",
 	"description": "A mod menu for Geometry Dash.",
 	"dependencies": {
@@ -20,11 +20,25 @@
 		]
 	},
 	"settings": {
+		"theme": {
+			"type": "string",
+			"name": "Theme",
+			"description": "Dark = black menus with white text. Light = white menus with black text. Both use grey outlines.",
+			"default": "Dark",
+			"one-of": ["Dark", "Light"]
+		},
 		"show-button": {
 			"type": "bool",
 			"name": "Show floating button",
 			"description": "Show the draggable NullCore button on screen. Tap it to open the menu.",
 			"default": true
+		},
+		"button-size": {
+			"type": "string",
+			"name": "Button size",
+			"description": "How big the floating button is.",
+			"default": "Small",
+			"one-of": ["Small", "Medium", "Large"]
 		},
 		"button-opacity": {
 			"type": "float",
