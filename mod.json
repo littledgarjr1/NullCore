@@ -8,7 +8,7 @@
 	},
 	"id": "inullexx.nullcore",
 	"name": "NullCore",
-	"version": "v0.1.3",
+	"version": "v0.1.4",
 	"developer": "iNullexx",
 	"description": "A mod menu for Geometry Dash.",
 	"dependencies": {
@@ -107,14 +107,14 @@
 			"type": "keybind",
 			"name": "Noclip Toggle Keybind",
 			"description": "Toggle Noclip while playing a level.",
-			"default": "Ctrl+Shift+N",
+			"default": [],
 			"category": "gameplay"
 		},
 		"auto-clicker-keybind": {
 			"type": "keybind",
 			"name": "Auto Clicker Toggle Keybind",
 			"description": "Toggle Auto Clicker while playing a level.",
-			"default": "Ctrl+Shift+A",
+			"default": [],
 			"category": "gameplay"
 		}
 	}
