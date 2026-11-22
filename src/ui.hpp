@@ -553,7 +553,7 @@ protected:
         addMenuItem(toggle, { pos.x + boxW() - scaled(23.f), pos.y + cardH() / 2.f });
         auto gear = CCSprite::create("nullcore-settings.png"_spr);
         if (gear) {
-            gear->setScale(scaled(15.f) / gear->getContentSize().height);
+            gear->setScale(scaled(23.f) / gear->getContentSize().height);
             auto button = CCMenuItemExt::createSpriteExtra(gear,
                 [onSettings](CCMenuItemSpriteExtra*) { onSettings(); });
             addMenuItem(button, { pos.x + boxW() - scaled(51.f), pos.y + cardH() / 2.f });
