@@ -1,6 +1,7 @@
 #pragma once
 #include <Geode/Geode.hpp>
 #include <algorithm>
+#include <string>
 
 // Central place for NullCore's saved state (persists between launches).
 namespace nc {
