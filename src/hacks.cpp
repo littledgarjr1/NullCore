@@ -2,6 +2,7 @@
 #include <Geode/modify/PlayLayer.hpp>
 #include <Geode/modify/CCScheduler.hpp>
 #include <Geode/modify/GJGameLevel.hpp>
+#include <Geode/modify/GJBaseGameLayer.hpp>
 #include "settings.hpp"
 
 using namespace geode::prelude;
