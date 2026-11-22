@@ -7,6 +7,7 @@
 using namespace geode::prelude;
 
 // ---------------------------------------------------------------- Noclip
+// Works with Safe Mode on or off.
 class $modify(NCPlayLayer, PlayLayer) {
     void destroyPlayer(PlayerObject* player, GameObject* object) {
         // Never swallow the anti-cheat spike, only normal deaths.
@@ -15,16 +16,39 @@ class $modify(NCPlayLayer, PlayLayer) {
     }
 };
 
-// ------------------------------------------------------------- Speedhack
+// ------------------------------------------------- Speedhack + TPS Bypass
+// Speedhack scales the time passed to the game each frame.
+// TPS Bypass splits each frame's time into fixed slices of 1/TPS seconds and
+// runs the game's update once per slice (only while inside a level).
+// Both work with Safe Mode on or off; Safe Mode only caps TPS at 240.
 class $modify(NCScheduler, CCScheduler) {
     void update(float dt) {
         if (nc::get("speedhack")) dt *= nc::speed();
-        CCScheduler::update(dt);
+
+        static double s_accumulator = 0.0;
+        constexpr int MAX_STEPS_PER_FRAME = 48; // protects slow devices from freezing
+
+        if (!nc::get("tps-bypass") || !PlayLayer::get()) {
+            s_accumulator = 0.0;
+            CCScheduler::update(dt);
+            return;
+        }
+
+        double step = 1.0 / static_cast<double>(nc::tps());
+        s_accumulator += dt;
+
+        int steps = static_cast<int>(s_accumulator / step);
+        s_accumulator -= steps * step;
+        if (steps > MAX_STEPS_PER_FRAME) steps = MAX_STEPS_PER_FRAME; // drop the overflow
+
+        for (int i = 0; i < steps; i++) {
+            CCScheduler::update(static_cast<float>(step));
+        }
     }
 };
 
 // ------------------------------------------------------------- Safe Mode
-// While Safe Mode is on, progress is never written to the level.
+// While Safe Mode is on, level progress is never saved. Hacks still work.
 class $modify(NCGameLevel, GJGameLevel) {
     void savePercentage(int percent, bool isPracticeMode, int clicks, int attempts, bool isChkValid) {
         if (nc::safeMode()) return;
@@ -32,5 +56,4 @@ class $modify(NCGameLevel, GJGameLevel) {
     }
 };
 
-// TODO next: TPS Bypass (use nc::tps() so the 240 cap applies in Safe Mode),
-//            Auto Clicker, Macro (record/replay).
+// TODO next: Auto Clicker, Macro.

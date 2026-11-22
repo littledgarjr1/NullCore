@@ -8,13 +8,26 @@ else()
 endif()
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
-project(NullCore VERSION 1.0.0)
+project(NullCore VERSION 1.1.0)
 
 # Add all source files inside src (recursively)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.cpp)
 
 # Set up the mod binary
 add_library(${PROJECT_NAME} SHARED ${SOURCES})
+
+# Embed the git commit so the in-game updater knows which build this is.
+execute_process(
+    COMMAND git rev-parse HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE NULLCORE_GIT_SHA
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if (NOT NULLCORE_GIT_SHA)
+    set(NULLCORE_GIT_SHA "unknown")
+endif()
+target_compile_definitions(${PROJECT_NAME} PRIVATE NULLCORE_GIT_SHA="${NULLCORE_GIT_SHA}")
 
 if (NOT DEFINED ENV{GEODE_SDK})
     message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")

@@ -8,7 +8,7 @@
 	},
 	"id": "inullexx.nullcore",
 	"name": "NullCore",
-	"version": "v1.0.1",
+	"version": "v1.1.0",
 	"developer": "iNullexx",
 	"description": "A mod menu for Geometry Dash.",
 	"dependencies": {
@@ -18,5 +18,27 @@
 		"sprites": [
 			"resources/*.png"
 		]
+	},
+	"settings": {
+		"show-button": {
+			"type": "bool",
+			"name": "Show floating button",
+			"description": "Show the draggable NullCore button on screen. Tap it to open the menu.",
+			"default": true
+		},
+		"button-opacity": {
+			"type": "float",
+			"name": "Button opacity",
+			"description": "How see-through the floating button is.",
+			"default": 0.85,
+			"min": 0.2,
+			"max": 1.0
+		},
+		"check-updates": {
+			"type": "bool",
+			"name": "Check for updates on startup",
+			"description": "Look for a newer NullCore build when the game starts.",
+			"default": true
+		}
 	}
-}	
+}
