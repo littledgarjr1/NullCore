@@ -3,6 +3,58 @@
 #include "updater.hpp"
 
 // =====================================================================
+// Auto Clicker settings — dedicated NullCore interface.
+// =====================================================================
+class NullCoreAutoClickerSettingsPopup : public NCWindow {
+protected:
+    inline static NullCoreAutoClickerSettingsPopup* s_open = nullptr;
+
+    bool init() override {
+        s_open = this;
+        return initWindow(380.f, 270.f, {
+            {"Auto Clicker", "nullcore-settings.png"},
+        });
+    }
+
+    void buildTab(int) override {
+        addChoice(0, 0, "Target Player", nc::autoClickerTarget(), []() {
+            auto current = nc::autoClickerTarget();
+            std::string next = current == "Player 1" ? "Player 2"
+                : current == "Player 2" ? "Both" : "Player 1";
+            nc::setAutoClickerTarget(next);
+            return next;
+        });
+
+        addNote("Choose which player's jump input the Auto Clicker controls.");
+    }
+
+    void onClose(CCObject* sender) override {
+        s_open = nullptr;
+        Popup::onClose(sender);
+    }
+
+public:
+    ~NullCoreAutoClickerSettingsPopup() {
+        if (s_open == this) s_open = nullptr;
+    }
+
+    static NullCoreAutoClickerSettingsPopup* create() {
+        auto ret = new NullCoreAutoClickerSettingsPopup();
+        if (ret->init()) {
+            ret->autorelease();
+            return ret;
+        }
+        delete ret;
+        return nullptr;
+    }
+
+    static void open() {
+        if (s_open) return;
+        if (auto popup = create()) popup->show();
+    }
+};
+
+// =====================================================================
 // NullCore main menu — Home and Player.
 // Single-column cards are sized for the new sidebar content area.
 // =====================================================================
@@ -89,18 +141,7 @@ protected:
 
         addCheckboxWithGear(0, 1, "Auto Clicker", nc::get("auto-clicker"),
             [](bool on) { nc::set("auto-clicker", on); },
-            [] {
-                createQuickPopup(
-                    "Auto Clicker Settings",
-                    fmt::format(
-                        "The Auto Clicker follows your current TPS rate.\n\n"
-                        "Current rate: <cy>{} CPS</c>\n"
-                        "Change TPS on the Home tab to change the click rate.",
-                        static_cast<int>(std::round(nc::tps()))
-                    ),
-                    "Close", nullptr, [](FLAlertLayer*, bool) {}
-                );
-            }
+            [] { NullCoreAutoClickerSettingsPopup::open(); }
         );
 
         addNote("Auto Clicker CPS follows your current TPS.");
