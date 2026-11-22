@@ -224,7 +224,6 @@ namespace nc::theme {
         thumb->drawDot({ x, height / 2.f }, thumbRadius, thumbColor);
         node->addChild(thumb);
 
-        if (!enabled) node->setOpacity(145);
         return node;
     }
 }
