@@ -3,8 +3,8 @@
 #include "updater.hpp"
 
 // =====================================================================
-//  The NullCore mod menu (opened by the floating button).
-//  Tabs: Home, Player.
+// NullCore main menu — Home and Player.
+// Single-column cards are sized for the new sidebar content area.
 // =====================================================================
 class NullCorePopup : public NCWindow {
 protected:
@@ -21,7 +21,7 @@ protected:
     bool init() override {
         s_open = this;
         return initWindow(380.f, 270.f, {
-            {"Home",   "nullcore-homeicon.png"},
+            {"Home", "nullcore-homeicon.png"},
             {"Player", "nullcore-player_2-icon.png"},
         });
     }
@@ -32,11 +32,10 @@ protected:
     }
 
     void buildHome() {
-        // TPS Bypass: 240 is the game's normal rate. Safe Mode caps it at 240.
-        addNumber(0, 0, "TPS\nBypass", fmt::format("{}", static_cast<int>(nc::tps())),
+        addNumber(0, 0, "TPS Bypass", fmt::format("{}", static_cast<int>(nc::tps())),
             [](std::string const& s, TextInput* in) {
                 float v = parse(s, 0.f);
-                if (v < 1.f) return;               // empty or invalid: ignore while typing
+                if (v < 1.f) return;
                 float cap = nc::safeMode() ? nc::SAFE_MODE_MAX_TPS : 100000.f;
                 if (v > cap) {
                     v = cap;
@@ -45,8 +44,7 @@ protected:
                 nc::setTps(std::max(v, 10.f));
             });
 
-        // Speedhack: 1 is normal speed.
-        addNumber(1, 0, "Speed\nHack", numText(nc::speed()),
+        addNumber(0, 1, "Speed Hack", numText(nc::speed()),
             [](std::string const& s, TextInput* in) {
                 float v = parse(s, 0.f);
                 if (v <= 0.f) return;
@@ -57,13 +55,13 @@ protected:
                 nc::setSpeed(std::max(v, 0.05f));
             });
 
-        addCheckbox(0, 1, "Safe Mode", nc::safeMode(), [this](bool on) {
+        addCheckbox(0, 2, "Safe Mode", nc::safeMode(), [this](bool on) {
             if (on) {
                 nc::set("safe-mode", true);
-                this->refreshLater(); // TPS box shows the capped value
+                this->refreshLater();
                 return;
             }
-            // Turning Safe Mode OFF needs confirmation.
+
             Ref<NullCorePopup> self = this;
             createQuickPopup(
                 "Warning",
@@ -73,20 +71,22 @@ protected:
                 "Cancel", "Turn Off",
                 [self](FLAlertLayer*, bool confirmed) {
                     if (confirmed) nc::set("safe-mode", false);
-                    self->refreshLater(); // redraws the checkbox in its real state
+                    self->refreshLater();
                 }
             );
         });
 
         addNote(nc::safeMode()
-            ? "Safe Mode is ON: progress is not saved and TPS is capped at 240."
-            : "Safe Mode is OFF: progress WILL be saved.");
+            ? "Safe Mode ON  |  Progress is not saved; TPS capped at 240."
+            : "Safe Mode OFF  |  Progress will be saved.");
     }
 
     void buildPlayer() {
-        addCheckbox(0, 0, "Noclip", nc::get("noclip"), [](bool on) { nc::set("noclip", on); });
-        addCheckbox(1, 0, "Auto\nClicker", false, [](bool) {}, false);
-        addCheckbox(0, 1, "Macro", false, [](bool) {}, false);
+        addCheckbox(0, 0, "Noclip", nc::get("noclip"),
+            [](bool on) { nc::set("noclip", on); });
+
+        addCheckbox(0, 1, "Auto Clicker", false, [](bool) {}, false);
+        addCheckbox(0, 2, "Macro", false, [](bool) {}, false);
         addNote("Auto Clicker and Macro are coming soon.");
     }
 
@@ -102,14 +102,19 @@ public:
 
     static NullCorePopup* create() {
         auto ret = new NullCorePopup();
-        if (ret->init()) { ret->autorelease(); return ret; }
+        if (ret->init()) {
+            ret->autorelease();
+            return ret;
+        }
         delete ret;
         return nullptr;
     }
 
-    // Opens the menu, or closes it if it's already open.
     static void toggle() {
-        if (s_open) { s_open->onClose(nullptr); return; }
-        if (auto p = create()) p->show();
+        if (s_open) {
+            s_open->onClose(nullptr);
+            return;
+        }
+        if (auto popup = create()) popup->show();
     }
 };
