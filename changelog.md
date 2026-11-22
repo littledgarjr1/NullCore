@@ -1,3 +1,9 @@
+# 0.1.4
+- Dark theme: thinner, softer outlines
+- Fonts other than Pusab now use the opposite color of the theme, and their size is matched to Pusab automatically
+- The update popup now restarts the game by itself after you press Install
+- Removed "Check for updates" and "Reset button position" from the Interface tab
+
 # 0.1.3
 - New menu design: windows with tabs (Home, Player / Interface, Sound Effects)
 - Number boxes you can type into (TPS Bypass, SpeedHack, Button Opacity)

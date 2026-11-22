@@ -27,6 +27,7 @@ namespace nc::theme {
         ccColor4F tabOn, tabOff, tabBorder;
         ccColor4F box, boxBorder;       // setting rows
         ccColor4F field, fieldBorder;   // value boxes
+        float stroke, strokeThin;       // outline widths
     };
 
     inline Palette pal() {
@@ -37,16 +38,18 @@ namespace nc::theme {
                 rgb(0, 0, 0), rgb(255, 255, 255),
                 rgb(190, 190, 190), rgb(255, 255, 255), rgb(0, 0, 0),
                 rgb(255, 255, 255), rgb(0, 0, 0),
-                rgb(0, 0, 0), rgb(0, 0, 0)
+                rgb(0, 0, 0), rgb(0, 0, 0),
+                2.f, 1.5f
             };
         }
         return {
-            rgb(12, 12, 12), rgb(120, 120, 120),
-            rgb(32, 32, 32), rgb(120, 120, 120),
-            rgb(12, 12, 12), rgb(120, 120, 120),
-            rgb(95, 95, 95), rgb(12, 12, 12), rgb(120, 120, 120),
-            rgb(52, 52, 52), rgb(120, 120, 120),
-            rgb(0, 0, 0), rgb(120, 120, 120)
+            rgb(12, 12, 12), rgb(80, 80, 80),
+            rgb(32, 32, 32), rgb(80, 80, 80),
+            rgb(12, 12, 12), rgb(80, 80, 80),
+            rgb(80, 80, 80), rgb(12, 12, 12), rgb(80, 80, 80),
+            rgb(48, 48, 48), rgb(80, 80, 80),
+            rgb(0, 0, 0), rgb(80, 80, 80),
+            1.f, 0.8f
         };
     }
 
@@ -64,20 +67,53 @@ namespace nc::theme {
         return "bigFont.fnt"; // Pusab
     }
 
-    // Some fonts come out bigger or smaller than Pusab at the same scale; tweak these if one looks off.
-    inline float fontScale() {
-        auto n = Mod::get()->getSettingValue<std::string>("font");
-        if (n == "PressStart2P")  return 0.8f;
-        if (n == "Chopin Script") return 1.15f;
+    inline bool isPusab() {
+        return Mod::get()->getSettingValue<std::string>("font") == "Pusab";
+    }
+
+    // Per-font fine tuning on top of the automatic size matching below.
+    inline float fontTweak(std::string const& n) {
+        if (n == "PressStart2P")  return 0.85f;
+        if (n == "Chopin Script") return 1.05f;
         return 1.f;
     }
 
+    // Scales every font so its line height matches Pusab's. This is measured in-game,
+    // so it stays correct whatever size the font was generated at.
+    inline float fontScale() {
+        static std::string s_name;
+        static float s_value = 1.f;
+        auto n = Mod::get()->getSettingValue<std::string>("font");
+        if (n == s_name) return s_value;
+
+        float v = 1.f;
+        if (n != "Pusab") {
+            auto ref = CCLabelBMFont::create("Hg", "bigFont.fnt");
+            auto mine = CCLabelBMFont::create("Hg", fontFile().c_str());
+            float rh = ref->getContentSize().height;
+            float mh = mine->getContentSize().height;
+            if (rh > 1.f && mh > 1.f) v = rh / mh;
+            v *= fontTweak(n);
+        }
+        s_name = n;
+        s_value = v;
+        return v;
+    }
+
+    // Text color for fonts other than Pusab: the opposite of the theme, so it can always be read.
+    inline ccColor3B oppositeText() {
+        return light() ? ccColor3B{0, 0, 0} : ccColor3B{255, 255, 255};
+    }
+
     // A label in the chosen font. maxW > 0 shrinks it to fit that width.
-    inline CCLabelBMFont* text(std::string const& s, float scale, float maxW = 0.f) {
+    // onField = true is for text on a black value box (always white).
+    inline CCLabelBMFont* text(std::string const& s, float scale, float maxW = 0.f, bool onField = false) {
         auto l = CCLabelBMFont::create(s.c_str(), fontFile().c_str());
         float sc = scale * fontScale();
         l->setScale(sc);
         if (maxW > 0.f) l->limitLabelWidth(maxW, sc, 0.1f);
+        if (onField) l->setColor(ccColor3B{255, 255, 255});
+        else if (!isPusab()) l->setColor(oppositeText());
         return l;
     }
 
@@ -125,7 +161,7 @@ namespace nc::theme {
         auto node = CCNode::create();
         node->setContentSize(CCSize(S, S));
         ccColor4F fill = enabled ? p.field : rgb(110, 110, 110);
-        node->addChild(roundRect(S, S, 5.f, fill, 1.5f, p.fieldBorder));
+        node->addChild(roundRect(S, S, 5.f, fill, p.strokeThin, p.fieldBorder));
         if (on) {
             auto d = CCDrawNode::create();
             ccColor4F white = rgb(255, 255, 255);
@@ -173,12 +209,12 @@ protected:
         m_closeBtn->setVisible(false);
 
         auto p = theme::pal();
-        m_mainLayer->addChildAtPosition(theme::roundRect(w, h, 14.f, p.frame, 2.f, p.frameBorder), Anchor::BottomLeft, ccp(0.f, 0.f));
+        m_mainLayer->addChildAtPosition(theme::roundRect(w, h, 14.f, p.frame, p.stroke, p.frameBorder), Anchor::BottomLeft, ccp(0.f, 0.f));
         // tab bar
-        m_mainLayer->addChildAtPosition(theme::roundRect(w - 2 * PAD, BAR_H, 10.f, p.bar, 2.f, p.barBorder), Anchor::BottomLeft, ccp(PAD, PAD));
+        m_mainLayer->addChildAtPosition(theme::roundRect(w - 2 * PAD, BAR_H, 10.f, p.bar, p.stroke, p.barBorder), Anchor::BottomLeft, ccp(PAD, PAD));
         // content panel
         float panelY = PAD * 2 + BAR_H;
-        m_mainLayer->addChildAtPosition(theme::roundRect(w - 2 * PAD, h - panelY - PAD, 10.f, p.panel, 2.f, p.panelBorder), Anchor::BottomLeft, ccp(PAD, panelY));
+        m_mainLayer->addChildAtPosition(theme::roundRect(w - 2 * PAD, h - panelY - PAD, 10.f, p.panel, p.stroke, p.panelBorder), Anchor::BottomLeft, ccp(PAD, panelY));
 
         // close button, sticking out of the top right corner
         auto closeBtn = CCMenuItemExt::createSpriteExtra(theme::closeX(30.f), [this](CCMenuItemSpriteExtra*) {
@@ -204,7 +240,7 @@ protected:
             bool selected = (i == m_tab);
             auto node = CCNode::create();
             node->setContentSize(CCSize(tw, 38.f));
-            node->addChild(theme::roundRect(tw, 38.f, 8.f, selected ? p.tabOn : p.tabOff, 2.f, p.tabBorder));
+            node->addChild(theme::roundRect(tw, 38.f, 8.f, selected ? p.tabOn : p.tabOff, p.stroke, p.tabBorder));
 
             float textX = 12.f;
             auto icon = CCSprite::create(Mod::get()->expandSpriteName(m_tabs[i].icon).c_str());
@@ -276,7 +312,7 @@ protected:
     // The rounded background and the label of a setting box.
     void addBoxBase(CCPoint c, std::string const& label, bool enabled = true) {
         auto p = theme::pal();
-        addNode(theme::roundRect(boxW(), BOX_H, 8.f, p.box, 2.f, p.boxBorder), c);
+        addNode(theme::roundRect(boxW(), BOX_H, 8.f, p.box, p.stroke, p.boxBorder), c);
         auto l = theme::text(label, 0.34f, boxW() - 10.f - 78.f);
         l->setAnchorPoint(CCPoint(0.f, 0.5f));
         if (!enabled) l->setOpacity(130);
@@ -313,8 +349,8 @@ protected:
         constexpr float FW = 70.f, FH = 28.f;
         auto face = CCNode::create();
         face->setContentSize(CCSize(FW, FH));
-        face->addChild(theme::roundRect(FW, FH, 6.f, p.field, 1.5f, p.fieldBorder));
-        auto lbl = theme::text(value, 0.36f, FW - 8.f);
+        face->addChild(theme::roundRect(FW, FH, 6.f, p.field, p.strokeThin, p.fieldBorder));
+        auto lbl = theme::text(value, 0.36f, FW - 8.f, true);
         lbl->setPosition(CCPoint(FW / 2.f, FH / 2.f));
         face->addChild(lbl);
 
@@ -334,7 +370,7 @@ protected:
                    std::function<void(std::string const&, TextInput*)> onChange) {
         auto c = cell(col, row);
         addBoxBase(c, label);
-        auto input = TextInput::create(78.f, "0", theme::fontFile());
+        auto input = TextInput::create(78.f, "0", "bigFont.fnt");
         input->setCommonFilter(CommonFilter::Float);
         input->setMaxCharCount(8);
         input->setScale(0.85f);
@@ -350,7 +386,7 @@ protected:
         auto p = theme::pal();
         auto face = CCNode::create();
         face->setContentSize(CCSize(boxW(), BOX_H));
-        face->addChild(theme::roundRect(boxW(), BOX_H, 8.f, p.box, 2.f, p.boxBorder));
+        face->addChild(theme::roundRect(boxW(), BOX_H, 8.f, p.box, p.stroke, p.boxBorder));
         auto l = theme::text(label, 0.34f, boxW() - 16.f);
         l->setPosition(CCPoint(boxW() / 2.f, BOX_H / 2.f));
         face->addChild(l);

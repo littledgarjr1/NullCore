@@ -1,7 +1,5 @@
 #pragma once
 #include "ui.hpp"
-#include "updater.hpp"
-#include "button.hpp"
 
 // =====================================================================
 //  NullCore Settings (opened from the main menu's bottom row).
@@ -82,10 +80,6 @@ protected:
         addCheckbox(1, 2, "Auto-Check\nUpdates", Mod::get()->getSettingValue<bool>("check-updates"), [](bool on) {
             Mod::get()->setSettingValue<bool>("check-updates", on);
         });
-
-        // row 3: actions
-        addAction(0, 3, "Check for updates", []() { nc::updater::check(true); });
-        addAction(1, 3, "Reset button position", []() { nc::FloatingButton::resetPosition(); });
     }
 
     void buildSound() {
