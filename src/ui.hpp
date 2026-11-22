@@ -536,6 +536,29 @@ protected:
         });
     }
 
+    void addCheckboxWithGear(
+        int col, int row, std::string const& label, bool value,
+        std::function<void(bool)> onChange, std::function<void()> onSettings,
+        bool enabled = true
+    ) {
+        auto pos = cell(col, row);
+        addBoxBase(pos, label, enabled);
+        auto toggle = CCMenuItemExt::createToggler(
+            theme::checkBox(true, enabled), theme::checkBox(false, enabled),
+            [onChange](CCMenuItemToggler* item) { onChange(!item->isToggled()); }
+        );
+        toggle->toggle(value);
+        toggle->setEnabled(enabled);
+        toggle->setScale(m_scale);
+        addMenuItem(toggle, { pos.x + boxW() - scaled(23.f), pos.y + cardH() / 2.f });
+        auto gear = CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
+        if (gear) {
+            gear->setScale(scaled(15.f) / gear->getContentSize().height);
+            auto button = CCMenuItemExt::createSpriteExtra(gear,
+                [onSettings](CCMenuItemSpriteExtra*) { onSettings(); });
+            addMenuItem(button, { pos.x + boxW() - scaled(51.f), pos.y + cardH() / 2.f });
+        }
+    }
     void addChoice(
         int col, int row, std::string const& label,
         std::string const& value, std::function<std::string()> onNext
