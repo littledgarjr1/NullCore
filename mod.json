@@ -102,6 +102,20 @@
 			"name": "Check for updates on startup",
 			"description": "Look for a newer NullCore build when the game starts.",
 			"default": true
+		},
+		"noclip-keybind": {
+			"type": "keybind",
+			"name": "Noclip Toggle Keybind",
+			"description": "Toggle Noclip while playing a level.",
+			"default": "Ctrl+Shift+N",
+			"category": "gameplay"
+		},
+		"auto-clicker-keybind": {
+			"type": "keybind",
+			"name": "Auto Clicker Toggle Keybind",
+			"description": "Toggle Auto Clicker while playing a level.",
+			"default": "Ctrl+Shift+A",
+			"category": "gameplay"
 		}
 	}
 }
