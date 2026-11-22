@@ -22,13 +22,15 @@ protected:
         s_open = this;
         return initWindow(380.f, 270.f, {
             {"Home", "nullcore-homeicon.png"},
-            {"Player", "nullcore-player_2-icon.png"},
+            {"Mods", "nullcore-player_2-icon.png"},
+            {"Macro", "nullcore-homeicon.png"},
         });
     }
 
     void buildTab(int index) override {
         if (index == 0) buildHome();
-        else buildPlayer();
+        else if (index == 1) buildMods();
+        else buildMacro();
     }
 
     void buildHome() {
@@ -81,13 +83,21 @@ protected:
             : "Safe Mode OFF  |  Progress will be saved.");
     }
 
-    void buildPlayer() {
+    void buildMods() {
         addCheckbox(0, 0, "Noclip", nc::get("noclip"),
             [](bool on) { nc::set("noclip", on); });
 
-        addCheckbox(0, 1, "Auto Clicker", false, [](bool) {}, false);
-        addCheckbox(0, 2, "Macro", false, [](bool) {}, false);
-        addNote("Auto Clicker and Macro are coming soon.");
+        addCheckbox(0, 1, "Auto Clicker", nc::get("auto-clicker"),
+            [](bool on) { nc::set("auto-clicker", on); });
+
+        addNote(fmt::format(
+            "Auto Clicker: {} CPS (based on current TPS).",
+            static_cast<int>(std::round(nc::tps()))
+        ));
+    }
+
+    void buildMacro() {
+        addNote("Macro tools are coming soon.");
     }
 
     void onClose(CCObject* sender) override {
