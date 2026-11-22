@@ -50,6 +50,29 @@ class $modify(NCScheduler, CCScheduler) {
     }
 };
 
+// -------------------------------------------------------------- Auto Clicker
+// Sends one complete jump press/release per physics tick. Its click rate
+// therefore follows the active TPS setting (240 TPS = 240 CPS).
+class $modify(NCAutoClicker, GJBaseGameLayer) {
+    void processCommands(float dt, bool isHalfTick, bool isLastTick) {
+        GJBaseGameLayer::processCommands(dt, isHalfTick, isLastTick);
+
+        auto playLayer = PlayLayer::get();
+        if (!playLayer || static_cast<GJBaseGameLayer*>(playLayer) != this) return;
+        if (!nc::get("auto-clicker")) return;
+
+        // processCommands can run more than once during a physics tick.
+        // Progress changes once per tick, so use it to avoid duplicate clicks.
+        static int64_t s_lastTick = -1;
+        auto tick = static_cast<int64_t>(m_gameState.m_currentProgress);
+        if (tick == s_lastTick) return;
+        s_lastTick = tick;
+
+        this->handleButton(true, 1, true);
+        this->handleButton(false, 1, true);
+    }
+};
+
 // ------------------------------------------------------------- Safe Mode
 // While Safe Mode is on, level progress is never saved. Hacks still work.
 class $modify(NCGameLevel, GJGameLevel) {
