@@ -551,7 +551,7 @@ protected:
         toggle->setEnabled(enabled);
         toggle->setScale(m_scale);
         addMenuItem(toggle, { pos.x + boxW() - scaled(23.f), pos.y + cardH() / 2.f });
-        auto gear = CCSprite::createWithSpriteFrameName("GJ_optionsBtn_001.png");
+        auto gear = CCSprite::create("nullcore-settings.png"_spr);
         if (gear) {
             gear->setScale(scaled(15.f) / gear->getContentSize().height);
             auto button = CCMenuItemExt::createSpriteExtra(gear,
