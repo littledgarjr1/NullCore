@@ -215,7 +215,13 @@ namespace nc::theme {
             : (light() ? rgb(100, 100, 100) : rgb(190, 190, 190));
         knob->drawDot({ x, height / 2.f }, 6.5f, knobColor);
         node->addChild(knob);
-        if (!enabled) node->setOpacity(115);
+        if (!enabled) {
+            if (auto sprite = typeinfo_cast<CCSprite*>(node)) {
+                sprite->setOpacity(115);
+            } else if (auto label = typeinfo_cast<CCLabelBMFont*>(node)) {
+                label->setOpacity(115);
+            }
+        }
         return node;
     }
 }
