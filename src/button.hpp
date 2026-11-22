@@ -9,7 +9,7 @@ namespace nc {
     // tap it to open the NullCore menu. Its position is remembered.
     class FloatingButton : public CCLayer {
     protected:
-        static constexpr float SIZE = 46.f;
+        static constexpr float SIZE = 48.f;
         CCSprite* m_icon = nullptr;
         CCPoint m_touchStart;
         CCPoint m_posStart;
@@ -33,15 +33,10 @@ namespace nc {
             this->setTouchMode(kCCTouchesOneByOne);
             this->setTouchEnabled(true);
 
-            // Grey ring with a black disc behind the icon.
-            auto ring = CCDrawNode::create();
-            ring->drawDot(CCPoint(SIZE / 2.f, SIZE / 2.f), SIZE / 2.f, theme::grey());
-            ring->drawDot(CCPoint(SIZE / 2.f, SIZE / 2.f), SIZE / 2.f - 2.f, theme::black());
-            this->addChild(ring);
-
-            m_icon = CCSprite::create("nullcore-icon.png"_spr);
+            // The icon already has its own rounded border, so it is the whole button.
+            m_icon = CCSprite::create("nullcore-mainicon.png"_spr);
             if (m_icon) {
-                m_icon->setScale((SIZE - 10.f) / m_icon->getContentSize().height);
+                m_icon->setScale(SIZE / m_icon->getContentSize().height);
                 m_icon->setPosition(CCPoint(SIZE / 2.f, SIZE / 2.f));
                 this->addChild(m_icon);
             }
