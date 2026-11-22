@@ -76,8 +76,18 @@ class $modify(NCAutoClicker, GJBaseGameLayer) {
         if (tick == s_lastTick) return;
         s_lastTick = tick;
 
-        this->handleButton(true, 1, true);
-        this->handleButton(false, 1, true);
+        auto target = nc::autoClickerTarget();
+        bool player1 = target == "Player 1" || target == "Both";
+        bool player2 = target == "Player 2" || target == "Both";
+
+        if (player1) {
+            this->handleButton(true, 1, true);
+            this->handleButton(false, 1, true);
+        }
+        if (player2) {
+            this->handleButton(true, 1, false);
+            this->handleButton(false, 1, false);
+        }
     }
 };
 
