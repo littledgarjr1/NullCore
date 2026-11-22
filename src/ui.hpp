@@ -38,12 +38,12 @@ namespace nc::theme {
     inline Palette pal() {
         if (light()) {
             return {
-                rgb(250, 250, 250), rgb(125, 125, 125),
+                rgb(250, 250, 250), rgb(0, 0, 0),
+                rgb(255, 255, 255), rgb(0, 0, 0),
+                rgb(244, 244, 244), rgb(0, 0, 0),
+                rgb(225, 225, 225), rgb(0, 0, 0),
                 rgb(255, 255, 255), rgb(205, 205, 205),
-                rgb(244, 244, 244), rgb(205, 205, 205),
-                rgb(225, 225, 225), rgb(120, 120, 120),
-                rgb(255, 255, 255), rgb(205, 205, 205),
-                rgb(235, 235, 235), rgb(130, 130, 130),
+                rgb(235, 235, 235), rgb(0, 0, 0),
                 rgb(0, 0, 0),
                 { 12, 12, 12 }, { 105, 105, 105 },
                 1.1f, 0.7f
@@ -51,12 +51,12 @@ namespace nc::theme {
         }
 
         return {
-            rgb(16, 16, 16), rgb(95, 95, 95),
-            rgb(23, 23, 23), rgb(75, 75, 75),
-            rgb(20, 20, 20), rgb(70, 70, 70),
-            rgb(52, 52, 52), rgb(145, 145, 145),
-            rgb(31, 31, 31), rgb(75, 75, 75),
-            rgb(39, 39, 39), rgb(105, 105, 105),
+            rgb(16, 16, 16), rgb(255, 255, 255),
+            rgb(23, 23, 23), rgb(255, 255, 255),
+            rgb(20, 20, 20), rgb(255, 255, 255),
+            rgb(52, 52, 52), rgb(255, 255, 255),
+            rgb(31, 31, 31), rgb(255, 255, 255),
+            rgb(39, 39, 39), rgb(255, 255, 255),
             rgb(255, 255, 255),
             { 245, 245, 245 }, { 165, 165, 165 },
             1.1f, 0.7f
@@ -130,7 +130,7 @@ namespace nc::theme {
     ) {
         auto draw = CCDrawNode::create();
         std::vector<CCPoint> points;
-        constexpr int segments = 6;
+        constexpr int segments = 16;
         constexpr float halfPi = 1.5707963f;
 
         auto arc = [&](float cx, float cy, float start) {
@@ -180,41 +180,52 @@ namespace nc::theme {
         auto node = CCNode::create();
         node->setContentSize({ size, size });
 
-        auto fill = enabled ? p.field : rgb(100, 100, 100);
-        node->addChild(roundRect(size, size, 5.f, fill, p.thin, p.fieldBorder));
+        auto outline = light() ? rgb(0, 0, 0) : rgb(255, 255, 255);
+        auto fill = on ? p.accent : p.field;
+        node->addChild(roundRect(size, size, 6.5f, fill, 1.f, outline));
 
         if (on) {
             auto tick = CCDrawNode::create();
             auto color = light() ? rgb(255, 255, 255) : rgb(0, 0, 0);
-            tick->drawSegment({ size * .2f, size * .52f }, { size * .42f, size * .3f }, 1.8f, color);
-            tick->drawSegment({ size * .42f, size * .3f }, { size * .82f, size * .76f }, 1.8f, color);
+            tick->drawSegment({ size * .20f, size * .51f }, { size * .41f, size * .31f }, 2.2f, color);
+            tick->drawSegment({ size * .41f, size * .31f }, { size * .81f, size * .73f }, 2.2f, color);
             node->addChild(tick);
         }
+
+        if (!enabled) node->setOpacity(145);
         return node;
     }
 
     inline CCNode* switchTrack(bool on, bool enabled = true) {
-        constexpr float width = 34.f;
-        constexpr float height = 19.f;
+        // Modern pill toggle: crisp monochrome outline, smooth track and a
+        // high-contrast circular thumb. The two states remain compatible
+        // with CCMenuItemToggler and its existing callbacks.
+        constexpr float width = 38.f;
+        constexpr float height = 21.f;
+        constexpr float inset = 2.5f;
+        constexpr float thumbRadius = 7.5f;
         auto p = pal();
         auto node = CCNode::create();
         node->setContentSize({ width, height });
 
+        auto outline = light() ? rgb(0, 0, 0) : rgb(255, 255, 255);
         auto track = roundRect(
             width, height, height / 2.f,
             on ? p.accent : p.field,
-            p.thin,
-            enabled ? p.fieldBorder : p.panelBorder
+            enabled ? 1.f : .8f,
+            outline
         );
         node->addChild(track);
 
-        auto knob = CCDrawNode::create();
-        float x = on ? width - 9.5f : 9.5f;
-        auto knobColor = on
+        auto thumb = CCDrawNode::create();
+        float x = on ? width - inset - thumbRadius : inset + thumbRadius;
+        auto thumbColor = on
             ? (light() ? rgb(255, 255, 255) : rgb(0, 0, 0))
-            : (light() ? rgb(100, 100, 100) : rgb(190, 190, 190));
-        knob->drawDot({ x, height / 2.f }, 6.5f, knobColor);
-        node->addChild(knob);
+            : p.primaryText;
+        thumb->drawDot({ x, height / 2.f }, thumbRadius, thumbColor);
+        node->addChild(thumb);
+
+        if (!enabled) node->setOpacity(145);
         return node;
     }
 }
