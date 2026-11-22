@@ -520,8 +520,8 @@ protected:
         addBoxBase(pos, label, enabled);
 
         auto toggle = CCMenuItemExt::createToggler(
-            theme::switchTrack(true, enabled),
-            theme::switchTrack(false, enabled),
+            theme::checkBox(true, enabled),
+            theme::checkBox(false, enabled),
             [onChange](CCMenuItemToggler* item) {
                 onChange(!item->isToggled());
             }
