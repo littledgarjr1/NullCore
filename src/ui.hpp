@@ -130,7 +130,7 @@ namespace nc::theme {
     ) {
         auto draw = CCDrawNode::create();
         std::vector<CCPoint> points;
-        constexpr int segments = 16;
+        constexpr int segments = 28;
         constexpr float halfPi = 1.5707963f;
 
         auto arc = [&](float cx, float cy, float start) {
