@@ -1,204 +1,69 @@
 #pragma once
-#include <Geode/Geode.hpp>
-#include "settings.hpp"
+#include "ui.hpp"
 #include "updater.hpp"
 
-using namespace geode::prelude;
-
-// ---------------------------------------------------------------- Theme
-// Two looks, both black and white with grey outlines:
-//   Dark  = black panels, white text
-//   Light = white panels, black text
-// Picked in NullCore Settings (the "theme" setting).
-namespace nc::theme {
-    inline bool light() {
-        return Mod::get()->getSettingValue<std::string>("theme") == "Light";
-    }
-
-    inline ccColor4F black() { return {0.f, 0.f, 0.f, 1.f}; }
-    inline ccColor4F white() { return {1.f, 1.f, 1.f, 1.f}; }
-    inline ccColor4F grey()  { return {0.45f, 0.45f, 0.45f, 1.f}; }
-
-    inline ccColor4F bg() { return light() ? white() : black(); }
-    inline ccColor4F fg() { return light() ? black() : white(); }
-    inline ccColor3B fgText() { return light() ? ccColor3B{0, 0, 0} : ccColor3B{255, 255, 255}; }
-    inline ccColor3B dimText() { return {130, 130, 130}; }
-
-    // A filled rectangle with a grey outline, drawn from (0,0) to (w,h).
-    inline CCDrawNode* rect(float w, float h, ccColor4F fill, float border = 1.5f) {
-        auto d = CCDrawNode::create();
-        CCPoint v[4] = {CCPoint(0.f, 0.f), CCPoint(w, 0.f), CCPoint(w, h), CCPoint(0.f, h)};
-        d->drawPolygon(v, 4, fill, border, grey());
-        return d;
-    }
-
-    // A button face with centered text.
-    inline CCNode* labelBox(float w, float h, char const* text, float scale, CCLabelBMFont** outLabel = nullptr) {
-        auto node = CCNode::create();
-        node->setContentSize(CCSize(w, h));
-        node->addChild(rect(w, h, bg()));
-        auto label = CCLabelBMFont::create(text, "bigFont.fnt");
-        label->setScale(scale);
-        label->setColor(fgText());
-        label->setPosition(CCPoint(w / 2.f, h / 2.f));
-        node->addChild(label);
-        if (outLabel) *outLabel = label;
-        return node;
-    }
-
-    // Flat switch: background color with a grey knob when off, foreground color with a background-colored knob when on.
-    inline CCNode* toggleSwitch(bool on) {
-        constexpr float W = 44.f, H = 22.f;
-        auto node = CCNode::create();
-        node->setContentSize(CCSize(W, H));
-        node->addChild(rect(W, H, on ? fg() : bg()));
-        float kx = on ? W - 19.f : 3.f;
-        CCPoint k[4] = {CCPoint(kx, 3.f), CCPoint(kx + 16.f, 3.f), CCPoint(kx + 16.f, H - 3.f), CCPoint(kx, H - 3.f)};
-        auto knob = CCDrawNode::create();
-        ccColor4F knobColor = on ? bg() : grey();
-        knob->drawPolygon(k, 4, knobColor, 0.5f, knobColor);
-        node->addChild(knob);
-        return node;
-    }
-}
-
-// Short alias so menu code can write theme::bg() etc.
-namespace theme = nc::theme;
-
-// ---------------------------------------------------------------- Menu
-class NullCorePopup : public geode::Popup {
+// =====================================================================
+//  The NullCore mod menu (opened by the floating button).
+//  Tabs: Home, Player.
+// =====================================================================
+class NullCorePopup : public NCWindow {
 protected:
-    struct Row { char const* key; char const* label; bool wip; };
-    static constexpr Row ROWS[] = {
-        {"noclip",      "Noclip",                  false},
-        {"speedhack",   "Speedhack",               false},
-        {"autoclicker", "Auto Clicker (soon)",     true},
-        {"tps-bypass",  "TPS Bypass",              false},
-        {"macro",       "Macro (soon)",            true},
-        {"safe-mode",   "Safe Mode",               false},
-    };
-
-    CCLabelBMFont* m_speedLabel = nullptr;
-    CCLabelBMFont* m_tpsLabel = nullptr;
-    CCLabelBMFont* m_status = nullptr;
     inline static NullCorePopup* s_open = nullptr;
 
+    static float parse(std::string const& s, float fallback) {
+        return geode::utils::numFromString<float>(s).unwrapOr(fallback);
+    }
+
+    static std::string numText(float v) {
+        return fmt::format("{}", v);
+    }
+
     bool init() override {
-        if (!Popup::init(300.f, 300.f)) return false;
         s_open = this;
+        return initWindow(380.f, 270.f, {
+            {"Home",   "nullcore-homeicon.png"},
+            {"Player", "nullcore-player_2-icon.png"},
+        });
+    }
 
-        // Replace the stock GD look with our own panel.
-        m_bgSprite->setVisible(false);
-        m_closeBtn->setVisible(false);
-        m_mainLayer->addChildAtPosition(
-            theme::rect(m_size.width, m_size.height, theme::bg(), 2.f),
-            Anchor::BottomLeft, ccp(0.f, 0.f)
-        );
+    void buildTab(int index) override {
+        if (index == 0) buildHome();
+        else buildPlayer();
+    }
 
-        auto title = CCLabelBMFont::create("NullCore", "bigFont.fnt");
-        title->setScale(0.7f);
-        title->setColor(theme::fgText());
-        m_mainLayer->addChildAtPosition(title, Anchor::Top, ccp(0.f, -26.f));
+    void buildHome() {
+        // TPS Bypass: 240 is the game's normal rate. Safe Mode caps it at 240.
+        addNumber(0, 0, "TPS\nBypass", fmt::format("{}", static_cast<int>(nc::tps())),
+            [](std::string const& s, TextInput* in) {
+                float v = parse(s, 0.f);
+                if (v < 1.f) return;               // empty or invalid: ignore while typing
+                float cap = nc::safeMode() ? nc::SAFE_MODE_MAX_TPS : 100000.f;
+                if (v > cap) {
+                    v = cap;
+                    in->setString(fmt::format("{}", static_cast<int>(v)));
+                }
+                nc::setTps(std::max(v, 10.f));
+            });
 
-        m_status = CCLabelBMFont::create("", "bigFont.fnt");
-        m_status->setScale(0.28f);
-        m_status->setColor(theme::dimText());
-        m_mainLayer->addChildAtPosition(m_status, Anchor::Top, ccp(0.f, -48.f));
+        // Speedhack: 1 is normal speed.
+        addNumber(1, 0, "Speed\nHack", numText(nc::speed()),
+            [](std::string const& s, TextInput* in) {
+                float v = parse(s, 0.f);
+                if (v <= 0.f) return;
+                if (v > 20.f) {
+                    v = 20.f;
+                    in->setString("20");
+                }
+                nc::setSpeed(std::max(v, 0.05f));
+            });
 
-        float y = m_size.height - 82.f;
-        for (auto const& r : ROWS) {
-            std::string key = r.key;
-            bool on = !r.wip && (key == "safe-mode" ? nc::safeMode() : nc::get(r.key));
-
-            auto toggler = CCMenuItemToggler::create(
-                theme::toggleSwitch(false), theme::toggleSwitch(true),
-                this, menu_selector(NullCorePopup::onToggle)
-            );
-            toggler->setID(r.key);
-            toggler->toggle(on);
-            toggler->setEnabled(!r.wip);
-            m_buttonMenu->addChildAtPosition(toggler, Anchor::BottomLeft, ccp(44.f, y));
-
-            auto label = CCLabelBMFont::create(r.label, "bigFont.fnt");
-            label->setScale(0.42f);
-            label->setColor(r.wip ? theme::dimText() : theme::fgText());
-            m_mainLayer->addChildAtPosition(label, Anchor::BottomLeft, ccp(74.f, y), ccp(0.f, 0.5f));
-
-            if (key == "speedhack") {
-                auto box = theme::labelBox(70.f, 22.f, speedText().c_str(), 0.35f, &m_speedLabel);
-                auto btn = CCMenuItemSpriteExtra::create(box, this, menu_selector(NullCorePopup::onSpeed));
-                m_buttonMenu->addChildAtPosition(btn, Anchor::BottomLeft, ccp(m_size.width - 52.f, y));
+        addCheckbox(0, 1, "Safe Mode", nc::safeMode(), [this](bool on) {
+            if (on) {
+                nc::set("safe-mode", true);
+                this->refreshLater(); // TPS box shows the capped value
+                return;
             }
-            if (key == "tps-bypass") {
-                auto box = theme::labelBox(70.f, 22.f, tpsText().c_str(), 0.3f, &m_tpsLabel);
-                auto btn = CCMenuItemSpriteExtra::create(box, this, menu_selector(NullCorePopup::onTps));
-                m_buttonMenu->addChildAtPosition(btn, Anchor::BottomLeft, ccp(m_size.width - 52.f, y));
-            }
-            y -= 32.f;
-        }
-
-        // Check for updates
-        auto upd = theme::labelBox(180.f, 24.f, "Check for updates", 0.32f);
-        auto updBtn = CCMenuItemSpriteExtra::create(upd, this, menu_selector(NullCorePopup::onCheckUpdates));
-        m_buttonMenu->addChildAtPosition(updBtn, Anchor::Bottom, ccp(0.f, 26.f));
-
-        // Close button (top right)
-        auto x = theme::labelBox(24.f, 24.f, "X", 0.4f);
-        auto closeBtn = CCMenuItemSpriteExtra::create(x, this, menu_selector(NullCorePopup::onClose));
-        m_buttonMenu->addChildAtPosition(closeBtn, Anchor::TopRight, ccp(-20.f, -20.f));
-
-        refreshLabels();
-        return true;
-    }
-
-    std::string speedText() { return fmt::format("{:.2f}x", nc::speed()); }
-    std::string tpsText()   { return fmt::format("{} TPS", static_cast<int>(nc::tps())); }
-
-    void refreshLabels() {
-        if (m_speedLabel) m_speedLabel->setString(speedText().c_str());
-        if (m_tpsLabel) m_tpsLabel->setString(tpsText().c_str());
-        if (m_status) {
-            m_status->setString(nc::safeMode()
-                ? "SAFE MODE ON - progress is not saved"
-                : "SAFE MODE OFF - progress WILL be saved");
-        }
-    }
-
-    void onSpeed(CCObject*) {
-        static constexpr float presets[] = {0.25f, 0.5f, 0.75f, 1.f, 1.5f, 2.f, 3.f};
-        float cur = nc::speed();
-        float next = presets[0];
-        for (float p : presets) {
-            if (p > cur + 0.001f) { next = p; break; }
-        }
-        nc::setSpeed(next);
-        refreshLabels();
-    }
-
-    void onTps(CCObject*) {
-        static constexpr float presets[] = {60.f, 120.f, 240.f, 480.f, 960.f};
-        float limit = nc::safeMode() ? nc::SAFE_MODE_MAX_TPS : 100000.f;
-        float cur = nc::tps();
-        float next = presets[0];
-        for (float p : presets) {
-            if (p > cur + 0.5f && p <= limit) { next = p; break; }
-        }
-        nc::setTps(next);
-        refreshLabels();
-    }
-
-    void onCheckUpdates(CCObject*) {
-        nc::updater::check(true);
-    }
-
-    void onToggle(CCObject* sender) {
-        auto toggler = static_cast<CCMenuItemToggler*>(sender);
-        std::string key = toggler->getID();
-        bool turningOn = !toggler->isToggled(); // the callback runs before the visual flip
-
-        if (key == "safe-mode" && !turningOn) {
             // Turning Safe Mode OFF needs confirmation.
-            Ref<CCMenuItemToggler> ref = toggler;
             Ref<NullCorePopup> self = this;
             createQuickPopup(
                 "Warning",
@@ -206,21 +71,23 @@ protected:
                 "This can lead to <cr>leaderboard bans</c>, or a <cr>ban on your account</c> if you look suspicious.\n\n"
                 "Are you sure?",
                 "Cancel", "Turn Off",
-                [ref, self](FLAlertLayer*, bool confirmed) {
-                    if (confirmed) {
-                        nc::set("safe-mode", false);
-                        self->refreshLabels();
-                    }
-                    else {
-                        ref->toggle(true); // put the switch back to ON
-                    }
+                [self](FLAlertLayer*, bool confirmed) {
+                    if (confirmed) nc::set("safe-mode", false);
+                    self->refreshLater(); // redraws the checkbox in its real state
                 }
             );
-            return;
-        }
+        });
 
-        nc::set(key.c_str(), turningOn);
-        if (key == "safe-mode") refreshLabels();
+        addNote(nc::safeMode()
+            ? "Safe Mode is ON: progress is not saved and TPS is capped at 240."
+            : "Safe Mode is OFF: progress WILL be saved.");
+    }
+
+    void buildPlayer() {
+        addCheckbox(0, 0, "Noclip", nc::get("noclip"), [](bool on) { nc::set("noclip", on); });
+        addCheckbox(1, 0, "Auto\nClicker", false, [](bool) {}, false);
+        addCheckbox(0, 1, "Macro", false, [](bool) {}, false);
+        addNote("Auto Clicker and Macro are coming soon.");
     }
 
     void onClose(CCObject* sender) override {

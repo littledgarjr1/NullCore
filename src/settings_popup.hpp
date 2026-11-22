@@ -1,16 +1,15 @@
 #pragma once
-#include <Geode/Geode.hpp>
-#include "popups.hpp"
+#include "ui.hpp"
+#include "updater.hpp"
 #include "button.hpp"
 
-using namespace geode::prelude;
-
-// NullCore's own settings screen (opened from the main menu's bottom row).
-// It edits the same values as the mod's page in Geode, so both always agree.
-class NullCoreSettingsPopup : public geode::Popup {
+// =====================================================================
+//  NullCore Settings (opened from the main menu's bottom row).
+//  Tabs: Interface, Sound Effects.
+//  Edits the same values as the mod's page in Geode, so both always agree.
+// =====================================================================
+class NullCoreSettingsPopup : public NCWindow {
 protected:
-    CCLabelBMFont* m_sizeLabel = nullptr;
-    CCLabelBMFont* m_opacityLabel = nullptr;
     inline static NullCoreSettingsPopup* s_open = nullptr;
 
     static std::string str(char const* key) {
@@ -24,118 +23,75 @@ protected:
         return opts[0];
     }
 
-    static std::string opacityText() {
-        double o = Mod::get()->getSettingValue<double>("button-opacity");
-        return fmt::format("{}%", static_cast<int>(std::round(o * 100.0)));
-    }
-
-    void addLabel(char const* text, float y) {
-        auto label = CCLabelBMFont::create(text, "bigFont.fnt");
-        label->setScale(0.42f);
-        label->setColor(theme::fgText());
-        m_mainLayer->addChildAtPosition(label, Anchor::BottomLeft, ccp(20.f, y), ccp(0.f, 0.5f));
-    }
-
-    CCLabelBMFont* addCycle(std::string const& text, SEL_MenuHandler callback, float y) {
-        CCLabelBMFont* lbl = nullptr;
-        auto box = theme::labelBox(90.f, 24.f, text.c_str(), 0.34f, &lbl);
-        auto btn = CCMenuItemSpriteExtra::create(box, this, callback);
-        m_buttonMenu->addChildAtPosition(btn, Anchor::BottomLeft, ccp(m_size.width - 62.f, y));
-        return lbl;
-    }
-
-    void addToggle(char const* key, bool value, float y) {
-        auto toggler = CCMenuItemToggler::create(
-            theme::toggleSwitch(false), theme::toggleSwitch(true),
-            this, menu_selector(NullCoreSettingsPopup::onToggle)
-        );
-        toggler->setID(key);
-        toggler->toggle(value);
-        m_buttonMenu->addChildAtPosition(toggler, Anchor::BottomLeft, ccp(m_size.width - 40.f, y));
-    }
-
-    bool init() override {
-        if (!Popup::init(300.f, 290.f)) return false;
-        s_open = this;
-
-        m_bgSprite->setVisible(false);
-        m_closeBtn->setVisible(false);
-        m_mainLayer->addChildAtPosition(
-            theme::rect(m_size.width, m_size.height, theme::bg(), 2.f),
-            Anchor::BottomLeft, ccp(0.f, 0.f)
-        );
-
-        auto title = CCLabelBMFont::create("NullCore Settings", "bigFont.fnt");
-        title->setScale(0.6f);
-        title->setColor(theme::fgText());
-        m_mainLayer->addChildAtPosition(title, Anchor::Top, ccp(0.f, -26.f));
-
-        float y = m_size.height - 74.f;
-
-        addLabel("Theme", y);
-        addCycle(str("theme"), menu_selector(NullCoreSettingsPopup::onTheme), y);
-        y -= 36.f;
-
-        addLabel("Floating button", y);
-        addToggle("show-button", Mod::get()->getSettingValue<bool>("show-button"), y);
-        y -= 36.f;
-
-        addLabel("Button size", y);
-        m_sizeLabel = addCycle(str("button-size"), menu_selector(NullCoreSettingsPopup::onSize), y);
-        y -= 36.f;
-
-        addLabel("Button opacity", y);
-        m_opacityLabel = addCycle(opacityText(), menu_selector(NullCoreSettingsPopup::onOpacity), y);
-        y -= 36.f;
-
-        addLabel("Auto-check updates", y);
-        addToggle("check-updates", Mod::get()->getSettingValue<bool>("check-updates"), y);
-
-        // Reset the floating button's position
-        auto reset = theme::labelBox(200.f, 24.f, "Reset button position", 0.32f);
-        auto resetBtn = CCMenuItemSpriteExtra::create(reset, this, menu_selector(NullCoreSettingsPopup::onReset));
-        m_buttonMenu->addChildAtPosition(resetBtn, Anchor::Bottom, ccp(0.f, 26.f));
-
-        // Close button (top right)
-        auto x = theme::labelBox(24.f, 24.f, "X", 0.4f);
-        auto closeBtn = CCMenuItemSpriteExtra::create(x, this, menu_selector(NullCoreSettingsPopup::onClose));
-        m_buttonMenu->addChildAtPosition(closeBtn, Anchor::TopRight, ccp(-20.f, -20.f));
-
-        return true;
-    }
-
-    void onTheme(CCObject*) {
-        Mod::get()->setSettingValue<std::string>("theme", nextOption({"Dark", "Light"}, str("theme")));
-        // Reopen so the whole screen redraws in the new theme.
+    // Close and reopen so the whole window redraws (used when the theme or font changes).
+    void reopen() {
         this->onClose(nullptr);
         queueInMainThread([] { NullCoreSettingsPopup::open(); });
     }
 
-    void onSize(CCObject*) {
-        auto next = nextOption({"Small", "Medium", "Large"}, str("button-size"));
-        Mod::get()->setSettingValue<std::string>("button-size", next);
-        m_sizeLabel->setString(next.c_str());
+    bool init() override {
+        s_open = this;
+        return initWindow(380.f, 270.f, {
+            {"Interface",     "nullcore-interface-icon.png"},
+            {"Sound Effects", "nullcore-soundeffecticon.png"},
+        });
     }
 
-    void onOpacity(CCObject*) {
-        static constexpr double presets[] = {1.0, 0.85, 0.7, 0.5};
-        double cur = Mod::get()->getSettingValue<double>("button-opacity");
-        double next = presets[0];
-        for (double p : presets) {
-            if (p < cur - 0.001) { next = p; break; }
-        }
-        Mod::get()->setSettingValue<double>("button-opacity", next);
-        m_opacityLabel->setString(opacityText().c_str());
+    void buildTab(int index) override {
+        if (index == 0) buildInterface();
+        else buildSound();
     }
 
-    void onToggle(CCObject* sender) {
-        auto toggler = static_cast<CCMenuItemToggler*>(sender);
-        bool turningOn = !toggler->isToggled(); // the callback runs before the visual flip
-        Mod::get()->setSettingValue<bool>(toggler->getID(), turningOn);
+    void buildInterface() {
+        // row 0: Theme | Font
+        addChoice(0, 0, "Theme", str("theme"), [this]() {
+            Mod::get()->setSettingValue<std::string>("theme", nextOption({"Light", "Dark"}, str("theme")));
+            this->reopen();
+            return str("theme");
+        });
+        addChoice(1, 0, "Font", str("font"), [this]() {
+            Mod::get()->setSettingValue<std::string>("font",
+                nextOption({"Pusab", "FredokaOne", "Rubik", "Arial", "PressStart2P", "Chopin Script"}, str("font")));
+            this->reopen();
+            return str("font");
+        });
+
+        // row 1: Floating Button | Button Size
+        addCheckbox(0, 1, "Floating\nButton", Mod::get()->getSettingValue<bool>("show-button"), [](bool on) {
+            Mod::get()->setSettingValue<bool>("show-button", on);
+        });
+        addChoice(1, 1, "Button\nSize", str("button-size"), []() {
+            auto next = nextOption({"Small", "Medium", "Large"}, str("button-size"));
+            Mod::get()->setSettingValue<std::string>("button-size", next);
+            return next;
+        });
+
+        // row 2: Button Opacity (percent) | Auto-Check Updates
+        double opacity = Mod::get()->getSettingValue<double>("button-opacity");
+        addNumber(0, 2, "Button\nOpacity", fmt::format("{}", static_cast<int>(std::round(opacity * 100.0))),
+            [](std::string const& s, TextInput* in) {
+                float v = geode::utils::numFromString<float>(s).unwrapOr(0.f);
+                if (v <= 0.f) return;
+                if (v > 100.f) {
+                    v = 100.f;
+                    in->setString("100");
+                }
+                v = std::max(v, 20.f); // keep the button visible
+                Mod::get()->setSettingValue<double>("button-opacity", static_cast<double>(v) / 100.0);
+            });
+        addCheckbox(1, 2, "Auto-Check\nUpdates", Mod::get()->getSettingValue<bool>("check-updates"), [](bool on) {
+            Mod::get()->setSettingValue<bool>("check-updates", on);
+        });
+
+        // row 3: actions
+        addAction(0, 3, "Check for updates", []() { nc::updater::check(true); });
+        addAction(1, 3, "Reset button position", []() { nc::FloatingButton::resetPosition(); });
     }
 
-    void onReset(CCObject*) {
-        nc::FloatingButton::resetPosition();
+    void buildSound() {
+        auto l = theme::text("Sound effects are coming soon.", 0.4f, m_w - 60.f);
+        l->setColor(theme::noteColor());
+        addNode(l, CCPoint(m_w / 2.f, m_h / 2.f + 14.f));
     }
 
     void onClose(CCObject* sender) override {

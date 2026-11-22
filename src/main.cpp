@@ -13,7 +13,10 @@ class $modify(NCMenuLayer, MenuLayer) {
 
         // Settings button in the main menu's bottom row.
         if (auto bottomMenu = this->getChildByID("bottom-menu")) {
-            if (auto icon = CCSprite::create("nullcore-settings.png"_spr)) {
+            // Uses resources/nullcore-settings.png (falls back to the main icon if it's missing).
+            auto icon = CCSprite::create("nullcore-settings.png"_spr);
+            if (!icon) icon = CCSprite::create("nullcore-mainicon.png"_spr);
+            if (icon) {
                 // match the height of the other bottom-menu buttons
                 icon->setScale(50.f / icon->getContentSize().height);
 
