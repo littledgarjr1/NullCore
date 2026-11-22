@@ -56,14 +56,32 @@ jobs:
           name: Build Output
           path: ${{ steps.build.outputs.build-output }}
 
-      - name: Publish nightly release
+      - name: Create nightly release
         if: github.event_name == 'workflow_dispatch' && inputs.publish_nightly
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release delete nightly --cleanup-tag --yes --repo ${{ github.repository }} || true
-          gh release create nightly ${{ steps.build.outputs.build-output }}/*.geode \
-            --prerelease --title "Nightly" \
+          gh release create nightly \
+            --prerelease \
+            --title "Nightly" \
             --notes "Build of ${{ github.sha }}" \
             --target ${{ github.sha }} \
             --repo ${{ github.repository }}
+
+      - name: Upload Geode files
+        if: github.event_name == 'workflow_dispatch' && inputs.publish_nightly
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUILD_OUTPUT: ${{ steps.build.outputs.build-output }}
+        run: |
+          mapfile -d '' files < <(find "$BUILD_OUTPUT" -type f -name '*.geode' -print0)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "ERROR: No .geode files found!"
+            exit 1
+          fi
+
+          gh release upload nightly "${files[@]}" \
+            --clobber \
+            --repo "${{ github.repository }}"
