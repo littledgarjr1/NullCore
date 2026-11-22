@@ -22,14 +22,14 @@ protected:
         s_open = this;
         return initWindow(380.f, 270.f, {
             {"Home", "nullcore-homeicon.png"},
-            {"Mods", "nullcore-player_2-icon.png"},
+            {"Player", "nullcore-player_2-icon.png"},
             {"Macro", "nullcore-homeicon.png"},
         });
     }
 
     void buildTab(int index) override {
         if (index == 0) buildHome();
-        else if (index == 1) buildMods();
+        else if (index == 1) buildPlayer();
         else buildMacro();
     }
 
@@ -83,19 +83,28 @@ protected:
             : "Safe Mode OFF  |  Progress will be saved.");
     }
 
-    void buildMods() {
+    void buildPlayer() {
         addCheckbox(0, 0, "Noclip", nc::get("noclip"),
             [](bool on) { nc::set("noclip", on); });
 
-        addCheckbox(0, 1, "Auto Clicker", nc::get("auto-clicker"),
-            [](bool on) { nc::set("auto-clicker", on); });
+        addCheckboxWithGear(0, 1, "Auto Clicker", nc::get("auto-clicker"),
+            [](bool on) { nc::set("auto-clicker", on); },
+            [] {
+                createQuickPopup(
+                    "Auto Clicker Settings",
+                    fmt::format(
+                        "The Auto Clicker follows your current TPS rate.\\n\\n"
+                        "Current rate: <cy>{} CPS</c>\\n"
+                        "Change TPS on the Home tab to change the click rate.",
+                        static_cast<int>(std::round(nc::tps()))
+                    ),
+                    "Close", nullptr, nullptr
+                );
+            }
+        );
 
-        addNote(fmt::format(
-            "Auto Clicker: {} CPS (based on current TPS).",
-            static_cast<int>(std::round(nc::tps()))
-        ));
+        addNote("Auto Clicker CPS follows your current TPS.");
     }
-
     void buildMacro() {
         addNote("Macro tools are coming soon.");
     }
