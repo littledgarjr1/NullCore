@@ -3,7 +3,7 @@
 #include "updater.hpp"
 
 // =====================================================================
-// Auto Clicker settings — dedicated NullCore interface.
+// Auto Clicker settings — focused, tab-free settings window.
 // =====================================================================
 class NullCoreAutoClickerSettingsPopup : public NCWindow {
 protected:
@@ -11,21 +11,22 @@ protected:
 
     bool init() override {
         s_open = this;
-        return initWindow(380.f, 270.f, {
-            {"Auto Clicker", "nullcore-settings.png"},
-        });
+        return initWindow(0.f, 0.f, {});
     }
 
     void buildTab(int) override {
-        addChoice(0, 0, "Target Player", nc::autoClickerTarget(), []() {
-            auto current = nc::autoClickerTarget();
-            std::string next = current == "Player 1" ? "Player 2"
-                : current == "Player 2" ? "Both" : "Player 1";
-            nc::setAutoClickerTarget(next);
-            return next;
-        });
+        auto heading = theme::text("TARGET PLAYERS", scaled(.42f), contentW() - scaled(30.f));
+        if (heading) {
+            heading->setAnchorPoint({ 0.f, .5f });
+            addNode(heading, { contentX() + scaled(16.f), m_h - pad() - scaled(30.f) });
+        }
 
-        addNote("Choose which player's jump input the Auto Clicker controls.");
+        addCheckbox(0, 0, "Player 1 (P1)", nc::autoClickerPlayer1(),
+            [](bool on) { nc::setAutoClickerPlayer1(on); });
+        addCheckbox(0, 1, "Player 2 (P2)", nc::autoClickerPlayer2(),
+            [](bool on) { nc::setAutoClickerPlayer2(on); });
+
+        addNote("Select either player, or both.");
     }
 
     void onClose(CCObject* sender) override {
