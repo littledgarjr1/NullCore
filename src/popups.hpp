@@ -49,6 +49,9 @@ namespace nc::theme {
     }
 }
 
+// Short alias so the menu code can write theme::black() etc.
+namespace theme = nc::theme;
+
 // ---------------------------------------------------------------- Menu
 class NullCorePopup : public geode::Popup {
 protected:
@@ -67,7 +70,7 @@ protected:
     CCLabelBMFont* m_status = nullptr;
     inline static NullCorePopup* s_open = nullptr;
 
-    bool init() {
+    bool init() override {
         if (!Popup::init(300.f, 300.f)) return false;
         s_open = this;
 
