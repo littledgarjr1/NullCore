@@ -63,8 +63,15 @@ class $modify(NCAutoClicker, GJBaseGameLayer) {
 
         // processCommands can run more than once during a physics tick.
         // Progress changes once per tick, so use it to avoid duplicate clicks.
+        static GJBaseGameLayer* s_lastLayer = nullptr;
         static int64_t s_lastTick = -1;
+        if (s_lastLayer != this) {
+            s_lastLayer = this;
+            s_lastTick = -1;
+        }
+
         auto tick = static_cast<int64_t>(m_gameState.m_currentProgress);
+        if (tick < s_lastTick) s_lastTick = -1; // level restarted
         if (tick == s_lastTick) return;
         s_lastTick = tick;
 
